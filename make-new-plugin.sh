@@ -7,22 +7,22 @@ newname="$1"
 Newname="$(echo "${newname^}")"
 NEWNAME="$(echo "${newname^^}")"
 
-grep -rl testplugin . | grep -v .git | while read name; do
-  sed -e "s+testplugin+$newname+g" -i "$name";
+grep -rl sailonline . | grep -v .git | while read name; do
+  sed -e "s+sailonline+$newname+g" -i "$name";
 done
 
-grep -rl Testplugin . | grep -v .git | while read name; do  
-  sed -e "s+Testplugin+$Newname+g" -i "$name";
+grep -rl Sailonline . | grep -v .git | while read name; do  
+  sed -e "s+Sailonline+$Newname+g" -i "$name";
 done 
 
-grep -rl TESTPLUGIN . | grep -v .git | while read name; do  
-  sed -e "s+TESTPLUGIN+$NEWNAME+g" -i "$name";
+grep -rl SAILONLINE . | grep -v .git | while read name; do  
+  sed -e "s+SAILONLINE+$NEWNAME+g" -i "$name";
 done 
 
-find . -name "*testplugin*" | grep -v .git | while read name; do
-  mv "$name" "$(echo "$name" | sed -e "s+testplugin+$newname+g")"
+find . -name "*sailonline*" | grep -v .git | while read name; do
+  mv "$name" "$(echo "$name" | sed -e "s+sailonline+$newname+g")"
 done
 
-find . -name "*Testplugin*" | grep -v .git | while read name; do
-  mv "$name" "$(echo "$name" | sed -e "s+Testplugin+$Newname+g")"
+find . -name "*Sailonline*" | grep -v .git | while read name; do
+  mv "$name" "$(echo "$name" | sed -e "s+Sailonline+$Newname+g")"
 done

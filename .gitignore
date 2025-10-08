@@ -1,6 +1,9 @@
+/build
 cmake-build*
+compile_commands.json
 .directory
 po/POTFILES.in.test
 temp
 tmp
 master.zip
+*~

@@ -1,4 +1,4 @@
-REM FE2  Testplugin
+REM FE2  Sailonline
 
 
 REM  Requires wxWidgets setup

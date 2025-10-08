@@ -1,16 +1,9 @@
 /***************************************************************************
- * Project:  OpenCPN
- * Purpose:  tpJSON
- * Author:   Jon Gough
- *
- * Project:  OpenCPN
- *
- ***************************************************************************
- *   Copyright (C) 2013 by David S. Register                               *
+ *   Copyright (C) 2025 by Jan Rheinländer                              *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 2 of the License, or     *
+ *   the Free Software Foundation; either version 3 of the License, or     *
  *   (at your option) any later version.                                   *
  *                                                                         *
  *   This program is distributed in the hope that it will be useful,       *
@@ -22,24 +15,30 @@
  *   along with this program; if not, write to the                         *
  *   Free Software Foundation, Inc.,                                       *
  *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,  USA.         *
- **************************************************************************/
+ ***************************************************************************/
 
-#ifndef TPJSON_H
-#define TPJSON_H
+#ifndef _SAILONLINE_H_
+#define _SAILONLINE_H_
 
+#include "ocpn_plugin.h"
 
-class tpJSON
-{
-    public:
-        tpJSON();
-        virtual ~tpJSON();
-        void ProcessMessage(wxString &message_id, wxString &message_body);
-        void CloseJSONOutputFile(void);
+#include "SailonlineUI.h"
 
-    protected:
+class sailonline_pi;
 
-    private:
-        wxFFile *m_ffOutputFile;
+/**
+ * Class that handles the main Sailonline  functionality.
+ */
+class Sailonline : public SailonlineBase {
+private:
+public:
+  Sailonline(wxWindow* parent, sailonline_pi& plugin);
+  ~Sailonline();
+
+  bool Show(bool show);
+
+private:
+  sailonline_pi& m_sailonline_pi;
 };
 
-#endif // tpJSON_H
+#endif

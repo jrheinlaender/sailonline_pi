@@ -1,19 +1,19 @@
 # ---------------------------------------------------------------------------
-# Frontend2 Author:   jongough aka. Jon Gough Copyright: License:  wxWidgets
-# License
+# Author: Jan Rheinländer
+# License: GPL v3+   License:  wxWidgets
 # ---------------------------------------------------------------------------
-# - Copyright (C)  by Jon Gough                            *
-# - License:     GPLv3+
+# - Copyright (C) 2025 Jan Rheinländer                                    *
+# - License:     GPLv3+                                                   *
 # - This program is free software; you can redistribute it and/or modify  *
 # - it under the terms of the GNU General Public License as published by  *
 # - the Free Software Foundation; either version 2 of the License, or     *
 # - (at your option) any later version.                                   *
-# - *
+# -                                                                       *
 # - This program is distributed in the hope that it will be useful,       *
 # - but WITHOUT ANY WARRANTY; without even the implied warranty of        *
 # - MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
 # - GNU General Public License for more details.                          *
-# - *
+# -                                                                       *
 # - You should have received a copy of the GNU General Public License     *
 # - along with this program; if not, write to the                         *
 # - xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx,                                       *
@@ -29,6 +29,9 @@
 # -- Modify section below to include all the details for your plugin.    -- ##
 
 set(CMLOC "CMakeLists: ")
+
+# Option to enable/disable testing
+option(OCPN_BUILD_TEST "Build plugin tests" OFF)
 
 # define minimum cmake version
 cmake_minimum_required(VERSION 3.10)
@@ -61,23 +64,19 @@ endif (COMMAND cmake_policy)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 
 # define plugin name, owner and versions
-set(VERBOSE_NAME "Testplugin")
-set(COMMON_NAME "Testplugin")
-set(TITLE_NAME "testplugin")
-set(PACKAGE_CONTACT "Jon Gough")
-set(PACKAGE "testplugin")
-set(SHORT_DESCRIPTION
-    "Plugin to test examples of the ODAPI and JSON interface for ODRAW"
-)
-set(LONG_DESCRIPTION
-    "testplugin Plugin is used to test out the ODraw API and demonstrate how to use it successfully from another plugin"
-)
+set(VERBOSE_NAME "Sailonline")
+set(COMMON_NAME "Sailonline")
+set(TITLE_NAME "sailonline")
+set(PACKAGE_CONTACT "Jan Rheinländer")
+set(PACKAGE "sailonline_pi")
+set(SHORT_DESCRIPTION  "Manage online racing on sailonline.org.")
+set(LONG_DESCRIPTION "Sailonline plugin is used to control boats in virtual races on sailonline.org.")
 
-set(VERSION_MAJOR "1")
+set(VERSION_MAJOR "0")
 set(VERSION_MINOR "0")
-set(VERSION_PATCH "341")
+set(VERSION_PATCH "1")
 set(VERSION_TWEAK "0")
-set(VERSION_DATE "30/04/2025") # DD/MM/YYYY format
+set(VERSION_DATE "27/09/2025") # DD/MM/YYYY format
 set(OCPN_MIN_VERSION "ov58")
 
 set(OCPN_API_VERSION_MAJOR "1")
@@ -87,25 +86,25 @@ set(TP_COMMENT "  * Release using CI")
 set(PARENT "opencpn")
 
 # Use to set up a local webserver with git installed. Default is github.com. Now
-# set in pluginconfigure.cmake set(GIT_REPOSITORY_SERVER "github.com")
+# set in pluginconfigure.cmake
+# set(GIT_REPOSITORY_SERVER "github.com")
 
 # Specifies Cloudsmith upload repository suffix for each catalog
 set(PROD "prod") # Standard Repos
 set(BETA "beta") # Standard Repos
 set(ALPHA "alpha") # Standard Repos
 
-# Set if  Cloudsmith Base Repository name does not match your Git Repository
-# name. set(CLOUDSMITH_BASE_REPOSITORY "${GIT_REPOSITORY_NAME}")
+# Set if  Cloudsmith Base Repository name does not match your Git Repository name.
+# set(CLOUDSMITH_BASE_REPOSITORY "${GIT_REPOSITORY_NAME}")
 # set(CLOUDSMITH_BASE_REPOSITORY "opencpn-plugins")  #Ricks's customization
-set(CLOUDSMITH_BASE_REPOSITORY "testplugin") # without the pi
+set(CLOUDSMITH_BASE_REPOSITORY "sailonline") # without the pi
 
-# Set the following to use OpenCPN cloudsmith repositories instead of own
-# repositories
+# Set the following to use OpenCPN cloudsmith repositories instead of own repositories
 set(CLOUDSMITH_USER "opencpn")
-# set(CLOUDSMITH_USER "jon-gough")
+# set(CLOUDSMITH_USER "XXXX")
 
 set(XML_INFO_URL
-    "https://opencpn.org/wiki/dokuwiki/doku.php?id=opencpn:opencpn_user_manual:plugins:safety:odraw1.6_pi"
+  "https://opencpn.org/OpenCPN/plugins/sailonline.html"
 )
 set(XML_SUMMARY ${SHORT_DESCRIPTION})
 set(XML_DESCRIPTION ${LONG_DESCRIPTION})
@@ -117,10 +116,11 @@ set(XML_DESCRIPTION ${LONG_DESCRIPTION})
 
 option(PLUGIN_USE_SVG "Use SVG graphics" ON)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
+set (CMAKE_EXPORT_COMPILE_COMMANDS yes)
 
 # Use local version of GLU library requires libs/glu directory
-set(USE_LOCAL_GLU FALSE)
+#set(USE_LOCAL_GLU FALSE)
 # Prefer libGL.so to libOpenGL.so, see CMP0072
 set(OpenGL_GL_PREFERENCE "LEGACY") # not operational
 
@@ -157,7 +157,7 @@ include("PluginSetup")
 
 set(CMAKE_VERBOSE_MAKEFILE "Activate verbose mode for make files" ON)
 
-option(Plugin_CXX11 "Use c++11" OFF)
+option(Plugin_CXX17 "Use c++17" OFF)
 
 # ----- Modify section above if there are special requirements for the plugin
 
@@ -175,18 +175,16 @@ add_definitions(-DUSE_S57)
 
 # ---- Section Below - Add your project SET(SRCS and SET(HDRS  etc..
 
-set(SRCS src/tpControlDialogDef.cpp src/tpControlDialogImpl.cpp src/tpicons.cpp
-         src/tpJSON.cpp src/testplugin_pi.cpp src/tpUtils.cpp
+set(SRCS
+    src/sailonline_pi.cpp
+    src/Sailonline.cpp
+    src/SailonlineUI.cpp
 )
 
 set(HDRS
-    include/testplugin_pi.h
-    include/tpicons.h
-    include/tpControlDialogDef.h
-    include/tpControlDialogImpl.h
-    include/tpIconCombo.h
-    include/tpJSON.h
-    include/tpUtils.h
+    include/sailonline_pi.h
+    include/Sailonline.h
+    include/SailonlineUI.h
 )
 
 add_definitions(-DPLUGIN_USE_SVG)
@@ -195,37 +193,9 @@ add_definitions(-DPLUGIN_USE_SVG)
 
 # ----- If using JSON validation in plugin section below is needed
 
-if (APPLE)
-  option(PI_JSON_SCHEMA_VALIDATOR "Use JSON Schema validator" OFF)
-else (APPLE)
-  option(PI_JSON_SCHEMA_VALIDATOR "Use JSON Schema validator" ON)
-endif (APPLE)
-
-set(PI_JSON_SCHEMA_VALIDATOR ON)
-
-if (PI_JSON_SCHEMA_VALIDATOR)
-  message(
-    STATUS
-      "${CMLOC}Using JSON Schema validation - warning this changes the 'flavour' of the executable and it may not be compatible with OpenCPN"
-  )
-  add_definitions(-DPI_JSON_SCHEMA_VALIDATOR)
-  message(STATUS "${CMLOC}Adding JSON Schema validation")
-
-  add_subdirectory(opencpn-libs/json-schema-validator)
-  target_link_libraries(${PACKAGE_NAME} ocpn::json-schema-validator)
-
-else (PI_JSON_SCHEMA_VALIDATOR)
-  message(
-    STATUS
-      "${CMLOC}Not using JSON Schema validation - warning invalid JSON 'may' cause unexpected crashes"
-  )
-endif (PI_JSON_SCHEMA_VALIDATOR)
+# Do not need Json Schema Validation
 
 # ----- If using JSON validation in plugin section above is needed
-
-if (QT_ANDROID)
-
-endif (QT_ANDROID)
 
 # =============================================================
 # Change as required to collect all the set( headers and SRCS This add_library
@@ -257,7 +227,7 @@ if (NOT OCPN_FLATPAK_CONFIG)
     target_link_libraries(${PACKAGE_NAME} windows::headers)
   endif (WIN32)
 
-  add_subdirectory(opencpn-libs/api-18)
+  add_subdirectory(opencpn-libs/api-${OCPN_API_VERSION_MINOR})
   target_link_libraries(${PACKAGE_NAME} ocpn::api)
 
   add_subdirectory(opencpn-libs/tinyxml)
@@ -269,11 +239,21 @@ if (NOT OCPN_FLATPAK_CONFIG)
   add_subdirectory(opencpn-libs/jsonlib)
   target_link_libraries(${PACKAGE_NAME} ocpn::jsonlib)
 
-  add_subdirectory(opencpn-libs/wxJSON)
-  target_link_libraries(${PACKAGE_NAME} ocpn::wxjson)
-
   add_subdirectory(opencpn-libs/plugin_dc)
   target_link_libraries(${PACKAGE_NAME} ocpn::plugin-dc)
+
+  add_subdirectory(opencpn-libs/pugixml)
+  target_link_libraries(${PACKAGE_NAME} ocpn::pugixml)
+
+   # @todo Why would this not be required on UNIX?
+  # @todo@ On macos the build fails without it, and macos is UNIX
+  # @todo See https://cmake.org/cmake/help/latest/variable/UNIX.html
+
+  add_subdirectory(opencpn-libs/bzip2)
+  target_link_libraries(${PACKAGE_NAME} ocpn::bzip2)
+
+  add_subdirectory(opencpn-libs/libtess2)
+  target_link_libraries(${PACKAGE_NAME} ocpn::libtess2)
 
 endif (NOT OCPN_FLATPAK_CONFIG)
 
@@ -283,43 +263,19 @@ add_definitions(-DTIXML_USE_STL)
 # ----- If using JSON validation section below is needed
 #
 
-if (UNIX
-    AND NOT APPLE
-    AND NOT QT_ANDRIOD
-    AND NOT OCPN_FLATPAK_CONFIG
-    AND NOT OCPN_FLATPAK_BUILD
-)
-  if (PI_JSON_SCHEMA_VALIDATOR)
-    # Change OS/ABI to be UNIX - System V to make it run with OCPN
-    set(lib_name lib${PACKAGE_NAME}.so)
-    message(STATUS "${CMLOC}lib-name: ${lib_name}")
-    find_file(elfedit elfedit)
-    if (NOT (${elfedit} STREQUAL "elfedit-NOTFOUND"))
-      message(STATUS "${CMLOC}Will ensure OS/ABI is set to 0 to match OCPN")
-      add_custom_command(
-        TARGET ${PACKAGE_NAME}
-        POST_BUILD
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        DEPENDS ${PACKAGE_NAME}
-        COMMENT " Running post build action on ${lib_name}."
-        COMMAND
-          sh -c
-          'elfedit --input-osabi=Linux --output-osabi=none ${lib_name} || (echo 0) '
-      )
-    else (NOT (${elfedit} STREQUAL "elfedit-NOTFOUND"))
-      message(
-        STATUS
-          "${CMLOC}Cannot correct OS/ABI to match OCPN if it is generated incorrectly. Package binutils needed"
-      )
-    endif (NOT (${elfedit} STREQUAL "elfedit-NOTFOUND"))
-  endif (PI_JSON_SCHEMA_VALIDATOR)
-endif (
-  UNIX
-  AND NOT APPLE
-  AND NOT QT_ANDRIOD
-)
+# Do not need Json Schema Validation
 
 # ------- Change below to match project requirements
+
+IF(WIN32)
+    IF(MSVC)
+        #include_directories(${PROJECT_SOURCE_DIR}/buildwin/include)
+        target_link_libraries(${PACKAGE_NAME} "${PROJECT_SOURCE_DIR}/buildwin/zlib1.lib")
+    ELSE()
+        # MINGW
+        target_link_libraries(${PACKAGE_NAME} "-lz")
+    ENDIF()
+ENDIF()
 
 # Needed for android builds
 if (QT_ANDROID)
@@ -345,3 +301,10 @@ get_property(
 foreach (dir ${dirs})
   message(STATUS "${CMLOC}dir='${dir}'")
 endforeach ()
+
+# Add the test directory if testing is enabled
+if(OCPN_BUILD_TEST)
+    message(STATUS "Building with tests enabled")
+    enable_testing()
+    add_subdirectory(test)
+endif()
