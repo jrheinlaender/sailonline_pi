@@ -179,12 +179,15 @@ set(SRCS
     src/sailonline_pi.cpp
     src/Sailonline.cpp
     src/SailonlineUI.cpp
+    src/FromTrackDialog.cpp
 )
 
 set(HDRS
     include/sailonline_pi.h
+    include/SolApi.h
     include/Sailonline.h
     include/SailonlineUI.h
+    include/FromTrackDialog.h
 )
 
 add_definitions(-DPLUGIN_USE_SVG)

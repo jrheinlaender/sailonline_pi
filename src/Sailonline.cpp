@@ -20,6 +20,7 @@
 #include <wx-3.2/wx/event.h>
 #include <wx/wx.h>
 #include <wx/window.h>
+#include <wx/clipbrd.h>
 
 #include <ocpn_plugin.h>
 #include <pugixml.hpp>
@@ -27,6 +28,7 @@
 #include "sailonline_pi.h"
 #include "Sailonline.h"
 #include "SolApi.h"
+#include "FromTrackDialog.h"
 
 Sailonline::Sailonline(wxWindow* parent, sailonline_pi& plugin)
     : SailonlineBase(parent), m_sailonline_pi(plugin), m_ppanel(nullptr) {
@@ -152,6 +154,26 @@ Sailonline::Sailonline(wxWindow* parent, sailonline_pi& plugin)
                                       wxLIST_STATE_SELECTED,
                                       wxLIST_STATE_SELECTED);
 
+  m_ppanel->m_pdclist->ClearAll();
+  m_ppanel->m_pdclist->InsertColumn(0, _("Time"));
+  m_ppanel->m_pdclist->InsertColumn(1, _("Type"));
+  m_ppanel->m_pdclist->InsertColumn(2, _("Course"));
+  m_ppanel->m_pdclist->SetColumnWidth(0, wxLIST_AUTOSIZE);
+  m_ppanel->m_pdclist->SetColumnWidth(1, wxLIST_AUTOSIZE);
+  m_ppanel->m_pdclist->SetColumnWidth(2, wxLIST_AUTOSIZE);
+
+  m_ppanel->m_pbutton_download->Connect(
+      wxEVT_COMMAND_BUTTON_CLICKED,
+      wxCommandEventHandler(Sailonline::OnDcDownload), nullptr, this);
+  m_ppanel->m_pbutton_upload->Connect(
+      wxEVT_COMMAND_BUTTON_CLICKED,
+      wxCommandEventHandler(Sailonline::OnDcUpload), nullptr, this);
+  m_ppanel->m_pbutton_fromtrack->Connect(
+      wxEVT_COMMAND_BUTTON_CLICKED,
+      wxCommandEventHandler(Sailonline::OnDcFromTrack), nullptr, this);
+  m_ppanel->m_pbutton_copydcs->Connect(
+      wxEVT_COMMAND_BUTTON_CLICKED,
+      wxCommandEventHandler(Sailonline::OnCopyDcs), nullptr, this);
 }
 
 Sailonline::~Sailonline() {
@@ -160,6 +182,19 @@ Sailonline::~Sailonline() {
   m_ppanel->m_pracelist->Disconnect(
       wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(Sailonline::OnRaceSelected),
       nullptr, this);
+  m_ppanel->m_pbutton_download->Disconnect(
+      wxEVT_COMMAND_BUTTON_CLICKED,
+      wxCommandEventHandler(Sailonline::OnDcDownload), nullptr, this);
+  m_ppanel->m_pbutton_upload->Disconnect(
+      wxEVT_COMMAND_BUTTON_CLICKED,
+      wxCommandEventHandler(Sailonline::OnDcUpload), nullptr, this);
+  m_ppanel->m_pbutton_fromtrack->Disconnect(
+      wxEVT_COMMAND_BUTTON_CLICKED,
+      wxCommandEventHandler(Sailonline::OnDcFromTrack), nullptr, this);
+  m_ppanel->m_pbutton_copydcs->Disconnect(
+      wxEVT_COMMAND_BUTTON_CLICKED,
+      wxCommandEventHandler(Sailonline::OnCopyDcs), nullptr, this);
+
   wxFileConfig* pconf = m_sailonline_pi.GetConf();
 
   wxRect rect = GetRect();
@@ -204,6 +239,66 @@ void Sailonline::OnRaceSelected(wxListEvent& event) {
 
 void Sailonline::OnDcDownload(wxCommandEvent& event) {}
 void Sailonline::OnDcUpload(wxCommandEvent& event) {}
+void Sailonline::OnDcFromTrack(wxCommandEvent& event) {
+  FromTrackDialog dlg(this);
+
+  if (dlg.ShowModal() == wxID_OK) {
+    wxString track_guid = dlg.GetSelectedTrack();
+    auto ptrack = GetTrack_Plugin(track_guid);
+    if (ptrack == nullptr) return;
+
+    double first_lat = 1000.0;
+    double first_lon = 0.0;
+    m_ppanel->m_pdclist->DeleteAllItems();
+
+    for (const auto waypoint : *ptrack->pWaypointList) {
+      if (first_lat > 360.0) {
+        first_lat = waypoint->m_lat;
+        first_lon = waypoint->m_lon;
+        continue;
+      }
+
+      wxListItem item;
+      long index = m_ppanel->m_pdclist->InsertItem(
+          m_ppanel->m_pdclist->GetItemCount(), item);
+      double bearing, distance;
+      DistanceBearingMercator_Plugin(waypoint->m_lat, waypoint->m_lon,
+                                     first_lat, first_lon, &bearing, &distance);
+      m_ppanel->m_pdclist->SetItem(
+          index, 0, waypoint->m_CreateTime.Format("%Y/%m/%d %H:%M:%S"));
+      m_ppanel->m_pdclist->SetItem(index, 1, "cc");
+      m_ppanel->m_pdclist->SetItem(index, 2,
+                                   wxString::Format("%03.3f", bearing));
+
+      first_lat = waypoint->m_lat;
+      first_lon = waypoint->m_lon;
+    }
+
+    m_ppanel->m_pdclist->SetColumnWidth(0, wxLIST_AUTOSIZE);
+    m_ppanel->m_pdclist->SetColumnWidth(1, wxLIST_AUTOSIZE);
+    m_ppanel->m_pdclist->SetColumnWidth(2, wxLIST_AUTOSIZE);
+  }
+}
+
+void Sailonline::OnCopyDcs(wxCommandEvent& event) {
+  wxString dc_list;
+
+  for (long index = 0; index < m_ppanel->m_pdclist->GetItemCount(); ++index) {
+    wxString timestamp = m_ppanel->m_pdclist->GetItemText(index, 0);
+    wxString coursetype = m_ppanel->m_pdclist->GetItemText(index, 1);
+    wxString bearing = m_ppanel->m_pdclist->GetItemText(index, 2);
+
+    wxString line;
+    line.Printf("%s %s %s %c", timestamp, coursetype, bearing, '\n');
+    dc_list.Append(std::move(line));
+  }
+
+  if (wxTheClipboard->Open()) {
+    wxTheClipboard->SetData(
+        new wxTextDataObject(dc_list));  // Don't delete, clipboard holds data
+    wxTheClipboard->Close();
+  }
+}
 
 void Sailonline::CleanupDownload() {
   if (m_downloading) OCPN_cancelDownloadFileBackground(m_download_handle);

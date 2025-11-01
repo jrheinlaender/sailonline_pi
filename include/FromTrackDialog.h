@@ -17,66 +17,33 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,  USA.         *
  ***************************************************************************/
 
-#ifndef _SAILONLINE_H_
-#define _SAILONLINE_H_
+#ifndef _FROMROUTEDIALOG_H
+#define _FROMROUTEDIALOG_H
 
-#include <string>
-#include <vector>
-
-#include "ocpn_plugin.h"
+#include <wx/event.h>
+#include <wx/string.h>
 
 #include "SailonlineUI.h"
 
-class sailonline_pi;
-class FromTrackDialog;
+class Sailonline;
 
 /**
- * Class that handles the main Sailonline  functionality.
+ * Class that handles the main DC from track  functionality.
  */
-class Sailonline : public SailonlineBase {
-private:
-  struct Race {
-    wxString m_id;
-    wxString m_name;
-    wxString m_description;
-    wxString m_message;
-    wxString m_start;
-    wxString m_url;
-  };
-
+class FromTrackDialog : public FromTrackDialogBase {
 public:
-  Sailonline(wxWindow* parent, sailonline_pi& plugin);
-  ~Sailonline();
+  FromTrackDialog(Sailonline* psailonline);
 
-  bool Show(bool show);
+  void OnTrack(wxCommandEvent& event);
+  void OnFromTrackDone(wxCommandEvent& event);
+
+  wxString GetSelectedTrack() const { return m_selected_track; }
 
 private:
-  sailonline_pi& m_sailonline_pi;
+  Sailonline* m_psailonline;
 
-  SailonlinePanel* m_ppanel;
-
-  std::vector<std::string> m_init_errors;
-
-  std::vector<Race> m_races;
-
-  // Events
-  void OnClose(wxCloseEvent& event) {
-    Hide();
-  }  // Don't destroy, otherwise sailonline_pi::DeInit() will crash
-  void OnClose(wxCommandEvent& event) { Hide(); }
-  void OnRaceSelected(wxListEvent& event);
-  void OnDcDownload(wxCommandEvent& event);
-  void OnDcUpload(wxCommandEvent& event);
-  void OnDcFromTrack(wxCommandEvent& event);
-  void OnCopyDcs(wxCommandEvent& event);
-
-  // Downloading
-  void OnDownloadEvent(OCPN_downloadEvent& ev);
-  bool m_connected;  // Download event is connected
-  long m_download_handle;
-  bool m_downloading;  // Flag to discover end of download
-  bool m_download_success;
-  void CleanupDownload();
+  wxArrayString m_track_guids;
+  wxString m_selected_track;
 };
 
 #endif
