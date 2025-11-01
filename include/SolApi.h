@@ -17,51 +17,17 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,  USA.         *
  ***************************************************************************/
 
-#ifndef _SAILONLINE_H_
-#define _SAILONLINE_H_
+#ifndef _SOLAPI_H_
+#define _SOLAPI_H_
 
-#include "ocpn_plugin.h"
-
-#include "SailonlineUI.h"
-
-class sailonline_pi;
+#include <string>
 
 /**
- * Class that handles the main Sailonline  functionality.
+ * Namespace that encapsulates all details of the sailonline.org API.
+ * Note that the API is "stable but not documented".
  */
-class Sailonline : public SailonlineBase {
-private:
-  struct Race {
-    wxString m_id;
-    wxString m_name;
-    wxString m_description;
-    wxString m_message;
-    wxString m_start;
-    wxString m_url;
-  };
-
-public:
-  Sailonline(wxWindow* parent, sailonline_pi& plugin);
-  ~Sailonline();
-
-  bool Show(bool show);
-
-private:
-  sailonline_pi& m_sailonline_pi;
-
-  SailonlinePanel* m_ppanel;
-
-  std::vector<std::string> m_init_errors;
-
-  std::vector<Race> m_races;
-
-  // Downloading
-  void OnDownloadEvent(OCPN_downloadEvent& ev);
-  bool m_connected;  // Download event is connected
-  long m_download_handle;
-  bool m_downloading;  // Flag to discover end of download
-  bool m_download_success;
-  void CleanupDownload();
+namespace SolApi {
+    const static std::string kUrlRacelist = "http://www.sailonline.org/webclient/races.xml?filter=active";
 };
 
 #endif
