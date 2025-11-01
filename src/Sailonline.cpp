@@ -42,6 +42,20 @@ Sailonline::Sailonline(wxWindow* parent, sailonline_pi& plugin)
   m_ppanel = new SailonlinePanel(this);
   psizer->Add(m_ppanel, 1, wxEXPAND, 0);
   psizer->SetSizeHints(this);
+
+  // Initialize size with old values from last use
+  wxFileConfig* pconf = m_sailonline_pi.GetConf();
+  wxRect rect = GetRect();
+  int sashpos;
+  pconf->Read("DialogX", &rect.x, rect.x);
+  pconf->Read("DialogY", &rect.y, rect.y);
+  pconf->Read("DialogWidth", &rect.width, wxMax(rect.width, 100));
+  pconf->Read("DialogHeight", &rect.height, wxMax(rect.height, 100));
+  pconf->Read("DialogSplit", &sashpos, GetClientSize().GetWidth() / 5);
+  SetPosition(rect.GetPosition());
+  SetInitialSize(rect.GetSize());
+  m_ppanel->m_psplitter->SetSashPosition(sashpos, true);
+
   m_ppanel->m_pracelist->ClearAll();
   m_ppanel->m_pracelist->InsertColumn(0, _("Number"));
   m_ppanel->m_pracelist->InsertColumn(1, _("Name"));
@@ -148,9 +162,13 @@ Sailonline::~Sailonline() {
       nullptr, this);
   wxFileConfig* pconf = m_sailonline_pi.GetConf();
 
-  wxPoint p = GetPosition();
-  pconf->Write("DialogX", p.x);
-  pconf->Write("DialogY", p.y);
+  wxRect rect = GetRect();
+  pconf->Write("DialogX", rect.x);
+  pconf->Write("DialogY", rect.y);
+  pconf->Write("DialogWidth", rect.width);
+  pconf->Write("DialogHeight", rect.height);
+  pconf->Write("DialogSplit", m_ppanel->m_psplitter->GetSashPosition());
+  pconf->Flush();
 bool Sailonline::Show(bool show) {
   if (!m_init_errors.empty()) {
     // TODO show dialog
@@ -182,9 +200,6 @@ void Sailonline::OnRaceSelected(wxListEvent& event) {
     // TODO Clear panel if nothing is found?
   }
 
-  // pconf->Write("DialogWidth", m_size.x);
-  // pconf->Write("DialogHeight", m_size.y);
-  // pconf->Write("DialogSplit", m_panel->m_splitter1->GetSashPosition());
 }
 
 void Sailonline::OnDcDownload(wxCommandEvent& event) {}

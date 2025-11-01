@@ -20,6 +20,9 @@
 #ifndef _SAILONLINE_H_
 #define _SAILONLINE_H_
 
+#include <string>
+#include <vector>
+
 #include "ocpn_plugin.h"
 
 #include "SailonlineUI.h"
@@ -55,6 +58,12 @@ private:
 
   std::vector<Race> m_races;
 
+  // Events
+  void OnClose(wxCloseEvent& event) {
+    Hide();
+  }  // Don't destroy, otherwise sailonline_pi::DeInit() will crash
+  void OnClose(wxCommandEvent& event) { Hide(); }
+  void OnRaceSelected(wxListEvent& event);
   // Downloading
   void OnDownloadEvent(OCPN_downloadEvent& ev);
   bool m_connected;  // Download event is connected
