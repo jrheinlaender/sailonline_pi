@@ -356,7 +356,7 @@ SailonlinePanel::SailonlinePanel( wxWindow* parent, wxWindowID id, const wxPoint
 	m_racedata->SetSizer( bSizer8 );
 	m_racedata->Layout();
 	bSizer8->Fit( m_racedata );
-	m_notebook->AddPage( m_racedata, _("Race"), true );
+	m_notebook->AddPage( m_racedata, _("Race"), false );
 	m_dcs = new wxPanel( m_notebook, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	wxBoxSizer* bSizer51;
 	bSizer51 = new wxBoxSizer( wxVERTICAL );
@@ -386,6 +386,9 @@ SailonlinePanel::SailonlinePanel( wxWindow* parent, wxWindowID id, const wxPoint
 	m_pbutton_fromtrack = new wxButton( m_dcs, wxID_ANY, _("From &Track"), wxDefaultPosition, wxDefaultSize, 0 );
 	fgSizer18->Add( m_pbutton_fromtrack, 0, wxALL, 5 );
 
+	m_pbutton_modify = new wxButton( m_dcs, wxID_ANY, _("&Modify ..."), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer18->Add( m_pbutton_modify, 0, wxALL, 5 );
+
 	m_pbutton_copydcs = new wxButton( m_dcs, wxID_ANY, _("Copy &DCs"), wxDefaultPosition, wxDefaultSize, 0 );
 	fgSizer18->Add( m_pbutton_copydcs, 0, wxALL, 5 );
 
@@ -399,7 +402,7 @@ SailonlinePanel::SailonlinePanel( wxWindow* parent, wxWindowID id, const wxPoint
 	m_dcs->SetSizer( bSizer51 );
 	m_dcs->Layout();
 	bSizer51->Fit( m_dcs );
-	m_notebook->AddPage( m_dcs, _("DC list"), false );
+	m_notebook->AddPage( m_dcs, _("DC list"), true );
 
 	bSizer5->Add( m_notebook, 1, wxEXPAND | wxALL, 5 );
 
@@ -429,6 +432,7 @@ SailonlinePanel::SailonlinePanel( wxWindow* parent, wxWindowID id, const wxPoint
 	m_pbutton_download->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( SailonlinePanel::OnDcDownload ), NULL, this );
 	m_pbutton_upload->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( SailonlinePanel::OnDcUpload ), NULL, this );
 	m_pbutton_fromtrack->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( SailonlinePanel::OnDcFromTrack ), NULL, this );
+	m_pbutton_modify->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( SailonlinePanel::OnDcModify ), NULL, this );
 }
 
 SailonlinePanel::~SailonlinePanel()
@@ -448,6 +452,7 @@ SailonlinePanel::~SailonlinePanel()
 	m_pbutton_download->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( SailonlinePanel::OnDcDownload ), NULL, this );
 	m_pbutton_upload->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( SailonlinePanel::OnDcUpload ), NULL, this );
 	m_pbutton_fromtrack->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( SailonlinePanel::OnDcFromTrack ), NULL, this );
+	m_pbutton_modify->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( SailonlinePanel::OnDcModify ), NULL, this );
 
 }
 

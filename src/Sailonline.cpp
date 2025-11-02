@@ -150,9 +150,12 @@ Sailonline::Sailonline(wxWindow* parent, sailonline_pi& plugin)
   m_ppanel->m_pracelist->Connect(wxEVT_LIST_ITEM_SELECTED,
                                  wxListEventHandler(Sailonline::OnRaceSelected),
                                  nullptr, this);
-  m_ppanel->m_pracelist->SetItemState(m_ppanel->m_pracelist->GetTopItem(),
-                                      wxLIST_STATE_SELECTED,
-                                      wxLIST_STATE_SELECTED);
+  if (!m_races.empty())
+    m_ppanel->m_pracelist->SetItemState(m_ppanel->m_pracelist->GetTopItem(),
+                                        wxLIST_STATE_SELECTED,
+                                        wxLIST_STATE_SELECTED);
+
+  m_prace = m_races.begin();
 
   m_ppanel->m_pdclist->ClearAll();
   m_ppanel->m_pdclist->InsertColumn(0, _("Time"));
@@ -171,6 +174,9 @@ Sailonline::Sailonline(wxWindow* parent, sailonline_pi& plugin)
   m_ppanel->m_pbutton_fromtrack->Connect(
       wxEVT_COMMAND_BUTTON_CLICKED,
       wxCommandEventHandler(Sailonline::OnDcFromTrack), nullptr, this);
+  m_ppanel->m_pbutton_modify->Connect(
+      wxEVT_COMMAND_BUTTON_CLICKED,
+      wxCommandEventHandler(Sailonline::OnDcModify), nullptr, this);
   m_ppanel->m_pbutton_copydcs->Connect(
       wxEVT_COMMAND_BUTTON_CLICKED,
       wxCommandEventHandler(Sailonline::OnCopyDcs), nullptr, this);
@@ -191,6 +197,9 @@ Sailonline::~Sailonline() {
   m_ppanel->m_pbutton_fromtrack->Disconnect(
       wxEVT_COMMAND_BUTTON_CLICKED,
       wxCommandEventHandler(Sailonline::OnDcFromTrack), nullptr, this);
+  m_ppanel->m_pbutton_modify->Disconnect(
+      wxEVT_COMMAND_BUTTON_CLICKED,
+      wxCommandEventHandler(Sailonline::OnDcModify), nullptr, this);
   m_ppanel->m_pbutton_copydcs->Disconnect(
       wxEVT_COMMAND_BUTTON_CLICKED,
       wxCommandEventHandler(Sailonline::OnCopyDcs), nullptr, this);
@@ -221,15 +230,16 @@ void Sailonline::OnRaceSelected(wxListEvent& event) {
   // Fill first tab with information about the race
   m_ppanel->SetLabel(racenumber);
 
-  for (const auto& race : m_races) {
-    if (race.m_id == racenumber) {
+  for (auto race_it = m_races.begin(); race_it != m_races.end(); ++race_it) {
+    if (race_it->m_id == racenumber) {
       m_ppanel->m_racename->SetLabel(
-          race.m_name);  // TODO Show only if race has not started yet.
+          race_it->m_name);  // TODO Show only if race has not started yet.
                          // Otherwise message is enough
-      m_ppanel->m_racemsg->SetLabel(race.m_message);
-      m_ppanel->m_racedesc->SetPage(race.m_description);
+      m_ppanel->m_racemsg->SetLabel(race_it->m_message);
+      m_ppanel->m_racedesc->SetPage(race_it->m_description);
       m_ppanel->m_racedesc->SetSize(m_ppanel->m_racedata->GetClientSize());
 
+      m_prace = race_it;
       break;
     }
     // TODO Clear panel if nothing is found?
@@ -239,6 +249,29 @@ void Sailonline::OnRaceSelected(wxListEvent& event) {
 
 void Sailonline::OnDcDownload(wxCommandEvent& event) {}
 void Sailonline::OnDcUpload(wxCommandEvent& event) {}
+
+void Sailonline::FillDcList() {
+    if (m_prace == m_races.end())
+        return;
+
+    m_ppanel->m_pdclist->DeleteAllItems();
+
+    for (const auto& dc : m_prace->m_dcs) {
+        wxListItem item;
+        long index = m_ppanel->m_pdclist->InsertItem(
+            m_ppanel->m_pdclist->GetItemCount(), item);
+        m_ppanel->m_pdclist->SetItem(
+            index, 0, dc.m_timestamp.Format("%Y/%m/%d %H:%M:%S"));
+        m_ppanel->m_pdclist->SetItem(index, 1, dc.m_is_twa ? "twa" : "cc");
+        m_ppanel->m_pdclist->SetItem(index, 2,
+                                    wxString::Format("%03.3f", dc.m_course));
+    }
+
+    m_ppanel->m_pdclist->SetColumnWidth(0, wxLIST_AUTOSIZE);
+    m_ppanel->m_pdclist->SetColumnWidth(1, wxLIST_AUTOSIZE);
+    m_ppanel->m_pdclist->SetColumnWidth(2, wxLIST_AUTOSIZE);
+}
+
 void Sailonline::OnDcFromTrack(wxCommandEvent& event) {
   FromTrackDialog dlg(this);
 
@@ -247,49 +280,65 @@ void Sailonline::OnDcFromTrack(wxCommandEvent& event) {
     auto ptrack = GetTrack_Plugin(track_guid);
     if (ptrack == nullptr) return;
 
-    double first_lat = 1000.0;
-    double first_lon = 0.0;
-    m_ppanel->m_pdclist->DeleteAllItems();
+    if (ptrack->pWaypointList->size() < 2)
+        return;
 
-    for (const auto waypoint : *ptrack->pWaypointList) {
-      if (first_lat > 360.0) {
-        first_lat = waypoint->m_lat;
-        first_lon = waypoint->m_lon;
-        continue;
-      }
+    auto first_waypoint = ptrack->pWaypointList->begin();
+    m_prace->m_dcs.clear();
 
-      wxListItem item;
-      long index = m_ppanel->m_pdclist->InsertItem(
-          m_ppanel->m_pdclist->GetItemCount(), item);
+    for (auto waypoint = first_waypoint; waypoint != ptrack->pWaypointList->end(); ++waypoint) {
+        if (waypoint == first_waypoint)
+            continue;
+
       double bearing, distance;
-      DistanceBearingMercator_Plugin(waypoint->m_lat, waypoint->m_lon,
-                                     first_lat, first_lon, &bearing, &distance);
-      m_ppanel->m_pdclist->SetItem(
-          index, 0, waypoint->m_CreateTime.Format("%Y/%m/%d %H:%M:%S"));
-      m_ppanel->m_pdclist->SetItem(index, 1, "cc");
-      m_ppanel->m_pdclist->SetItem(index, 2,
-                                   wxString::Format("%03.3f", bearing));
-
-      first_lat = waypoint->m_lat;
-      first_lon = waypoint->m_lon;
+      auto wp = *waypoint;
+      auto first_wp = *first_waypoint;
+      DistanceBearingMercator_Plugin(wp->m_lat, wp->m_lon,
+                                     first_wp->m_lat, first_wp->m_lon, &bearing, &distance);
+      m_prace->m_dcs.emplace_back(Dc{first_wp->m_CreateTime, first_wp->m_lat, first_wp->m_lon, bearing, false});
+      first_waypoint = waypoint;
     }
 
-    m_ppanel->m_pdclist->SetColumnWidth(0, wxLIST_AUTOSIZE);
-    m_ppanel->m_pdclist->SetColumnWidth(1, wxLIST_AUTOSIZE);
-    m_ppanel->m_pdclist->SetColumnWidth(2, wxLIST_AUTOSIZE);
+    FillDcList();
   }
+}
+
+void Sailonline::OnDcModify(wxCommandEvent& event) {
+    if (m_prace->m_dcs.size() < 2)
+        return;
+
+
+    auto last_dc = m_prace->m_dcs.begin();
+
+    for (auto dc = last_dc + 1; dc != m_prace->m_dcs.end(); ) {
+        if (std::fabs(dc->m_course - last_dc->m_course) < 2.0)  {
+            // Course (almost) unchanged, remove this dc
+            // last_dc remains unchanged
+            dc = m_prace->m_dcs.erase(dc);
+        } else {
+            // Calculate new course (could be optimized to only calculate when intermediate dcs have been deleted)
+            // TODO No land collision check!!!
+            double new_dist;
+            DistanceBearingMercator_Plugin(dc->m_lat_start, dc->m_lon_start, last_dc->m_lat_start, last_dc->m_lon_start, &last_dc->m_course, &new_dist);
+
+            last_dc = dc;
+            ++dc;
+        }
+    }
+
+    FillDcList();
 }
 
 void Sailonline::OnCopyDcs(wxCommandEvent& event) {
   wxString dc_list;
 
-  for (long index = 0; index < m_ppanel->m_pdclist->GetItemCount(); ++index) {
-    wxString timestamp = m_ppanel->m_pdclist->GetItemText(index, 0);
-    wxString coursetype = m_ppanel->m_pdclist->GetItemText(index, 1);
-    wxString bearing = m_ppanel->m_pdclist->GetItemText(index, 2);
+  for (const auto& dc : m_prace->m_dcs) {
+    wxString timestamp = dc.m_timestamp.Format("%Y/%m/%d %H:%M:%S");
+    wxString coursetype = (dc.m_is_twa ? "twa" : "cc");
+    wxString course = wxString::Format("%03.3f", dc.m_course);
 
     wxString line;
-    line.Printf("%s %s %s %c", timestamp, coursetype, bearing, '\n');
+    line.Printf("%s %s %s %c", timestamp, coursetype, course, '\n');
     dc_list.Append(std::move(line));
   }
 

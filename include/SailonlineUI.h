@@ -161,6 +161,7 @@ class SailonlinePanel : public wxPanel
 		virtual void OnDcDownload( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnDcUpload( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnDcFromTrack( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnDcModify( wxCommandEvent& event ) { event.Skip(); }
 
 
 	public:
@@ -174,6 +175,7 @@ class SailonlinePanel : public wxPanel
 		wxButton* m_pbutton_download;
 		wxButton* m_pbutton_upload;
 		wxButton* m_pbutton_fromtrack;
+		wxButton* m_pbutton_modify;
 		wxButton* m_pbutton_copydcs;
 
 		SailonlinePanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 800,502 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );

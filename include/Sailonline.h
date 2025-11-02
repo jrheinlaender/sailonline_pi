@@ -35,6 +35,13 @@ class FromTrackDialog;
  */
 class Sailonline : public SailonlineBase {
 private:
+    struct Dc {
+      wxDateTime m_timestamp;
+      double m_lat_start;
+      double m_lon_start;
+      double m_course;
+      bool m_is_twa;
+  };
   struct Race {
     wxString m_id;
     wxString m_name;
@@ -42,6 +49,8 @@ private:
     wxString m_message;
     wxString m_start;
     wxString m_url;
+
+    std::vector<Dc> m_dcs;
   };
 
 public:
@@ -58,6 +67,7 @@ private:
   std::vector<std::string> m_init_errors;
 
   std::vector<Race> m_races;
+  std::vector<Race>::iterator  m_prace;
 
   // Events
   void OnClose(wxCloseEvent& event) {
@@ -68,6 +78,7 @@ private:
   void OnDcDownload(wxCommandEvent& event);
   void OnDcUpload(wxCommandEvent& event);
   void OnDcFromTrack(wxCommandEvent& event);
+  void OnDcModify(wxCommandEvent& event);
   void OnCopyDcs(wxCommandEvent& event);
 
   // Downloading
@@ -77,6 +88,10 @@ private:
   bool m_downloading;  // Flag to discover end of download
   bool m_download_success;
   void CleanupDownload();
+
+  // Utility functions
+  /// Update dc panel with data from m_prace->m_dcs
+  void FillDcList();
 };
 
 #endif
