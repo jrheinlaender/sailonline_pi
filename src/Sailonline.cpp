@@ -64,9 +64,9 @@ Sailonline::Sailonline(wxWindow* parent, sailonline_pi& plugin)
 
   // Fill racelist
   // Build target filename
-  wxString download_target = GetpPrivateApplicationDataLocation()
-                                 ->Append(wxFileName::GetPathSeparator())
-                                 .Append("plugins/sailonline_pi/racelist");
+  wxString download_target = GetPluginDataDir("sailonline_pi")
+                                 .Append(wxFileName::GetPathSeparator())
+                                 .Append("racelist");
   if (!wxDirExists(download_target)) wxMkdir(download_target);
   download_target.Append(wxFileName::GetPathSeparator()).Append("racelist.xml");
   wxLogMessage("Downloading racelist to %s", download_target);
