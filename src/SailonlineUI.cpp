@@ -11,7 +11,7 @@
 
 SailonlineBase::SailonlineBase( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxFrame( parent, id, title, pos, size, style )
 {
-	this->SetSizeHints( wxSize( 400,300 ), wxDefaultSize );
+	this->SetSizeHints( wxSize( 600,450 ), wxDefaultSize );
 
 	m_menubar3 = new wxMenuBar( 0 );
 	m_menubar3->Hide();
@@ -2799,7 +2799,6 @@ FromTrackDialogBase::FromTrackDialogBase( wxWindow* parent, wxWindowID id, const
 	this->Centre( wxBOTH );
 
 	// Connect Events
-	m_ptracklist->Connect( wxEVT_COMMAND_CHOICE_SELECTED, wxCommandEventHandler( FromTrackDialogBase::OnRoute ), NULL, this );
 	m_pfilter->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( FromTrackDialogBase::OnFilterText ), NULL, this );
 	m_button48->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FromTrackDialogBase::OnResetAll ), NULL, this );
 	m_pbutton_fromtrack_done->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FromTrackDialogBase::OnFromTrackDone ), NULL, this );
@@ -2808,7 +2807,6 @@ FromTrackDialogBase::FromTrackDialogBase( wxWindow* parent, wxWindowID id, const
 FromTrackDialogBase::~FromTrackDialogBase()
 {
 	// Disconnect Events
-	m_ptracklist->Disconnect( wxEVT_COMMAND_CHOICE_SELECTED, wxCommandEventHandler( FromTrackDialogBase::OnRoute ), NULL, this );
 	m_pfilter->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( FromTrackDialogBase::OnFilterText ), NULL, this );
 	m_button48->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FromTrackDialogBase::OnResetAll ), NULL, this );
 	m_pbutton_fromtrack_done->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FromTrackDialogBase::OnFromTrackDone ), NULL, this );

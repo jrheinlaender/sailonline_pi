@@ -27,16 +27,12 @@
 FromTrackDialog::FromTrackDialog(Sailonline* psailonline)
     : FromTrackDialogBase(psailonline), m_psailonline(std::move(psailonline)) {
   m_track_guids = GetTrackGUIDArray();
-  m_ptracklist->SetColumns(2);
+  m_ptracklist->SetColumns(1);
 
   for (const auto& guid : m_track_guids) {
     auto ptrack = GetTrack_Plugin(guid);
     m_ptracklist->Append(ptrack->m_NameString);
   }
-
-  m_ptracklist->Connect(wxEVT_CHOICE,
-                        wxCommandEventHandler(FromTrackDialog::OnTrack),
-                        nullptr, this);
 
   if (!m_track_guids.empty()) {
     m_ptracklist->Select(0);
@@ -44,16 +40,10 @@ FromTrackDialog::FromTrackDialog(Sailonline* psailonline)
   }
 }
 
-void FromTrackDialog::OnTrack(wxCommandEvent& event) {
-  if (event.GetSelection() >= 0 &&
-      size_t(event.GetSelection()) < m_track_guids.GetCount())
-    m_selected_track = m_track_guids[event.GetSelection()];
-}
-
 void FromTrackDialog::OnFromTrackDone(wxCommandEvent& event) {
+    if (m_ptracklist->GetSelection() != wxNOT_FOUND)
+        m_selected_track = m_track_guids[m_ptracklist->GetSelection()];
+
   Hide();
-  m_ptracklist->Disconnect(wxEVT_CHOICE,
-                           wxCommandEventHandler(FromTrackDialog::OnTrack),
-                           nullptr, this);
   SetReturnCode(wxID_OK);
 }

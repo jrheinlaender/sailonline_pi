@@ -34,7 +34,6 @@ class FromTrackDialog : public FromTrackDialogBase {
 public:
   FromTrackDialog(Sailonline* psailonline);
 
-  void OnTrack(wxCommandEvent& event);
   void OnFromTrackDone(wxCommandEvent& event);
 
   wxString GetSelectedTrack() const { return m_selected_track; }

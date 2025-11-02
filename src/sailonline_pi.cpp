@@ -121,16 +121,9 @@ int sailonline_pi::Init(void) {
       this);
 #endif
 
-  //    In order to avoid an ASSERT on msw debug builds,
-  //    we need to create a dummy menu to act as a surrogate parent of the
-  //    created MenuItems The Items will be re-parented when added to the real
-  //    context meenu
-  wxMenu dummy_menu;
-
   LoadConfig();
 
-  return (WANTS_OVERLAY_CALLBACK | WANTS_OPENGL_OVERLAY_CALLBACK |
-          WANTS_TOOLBAR_CALLBACK | WANTS_CONFIG);
+  return (WANTS_TOOLBAR_CALLBACK | WANTS_CONFIG);
 }
 
 bool sailonline_pi::DeInit(void) {

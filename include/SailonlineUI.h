@@ -647,7 +647,6 @@ class FromTrackDialogBase : public wxDialog
 		wxButton* m_button48;
 
 		// Virtual event handlers, override them in your derived class
-		virtual void OnRoute( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnFilterText( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnResetAll( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnFromTrackDone( wxCommandEvent& event ) { event.Skip(); }

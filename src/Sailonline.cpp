@@ -51,9 +51,9 @@ Sailonline::Sailonline(wxWindow* parent, sailonline_pi& plugin)
   int sashpos;
   pconf->Read("DialogX", &rect.x, rect.x);
   pconf->Read("DialogY", &rect.y, rect.y);
-  pconf->Read("DialogWidth", &rect.width, wxMax(rect.width, 100));
-  pconf->Read("DialogHeight", &rect.height, wxMax(rect.height, 100));
-  pconf->Read("DialogSplit", &sashpos, GetClientSize().GetWidth() / 5);
+  pconf->Read("DialogWidth", &rect.width, wxMax(rect.width, 600));
+  pconf->Read("DialogHeight", &rect.height, wxMax(rect.height, 450));
+  pconf->Read("DialogSplit", &sashpos, rect.width / 4);
   SetPosition(rect.GetPosition());
   SetInitialSize(rect.GetSize());
   m_ppanel->m_psplitter->SetSashPosition(sashpos, true);
