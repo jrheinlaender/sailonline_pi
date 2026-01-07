@@ -689,10 +689,103 @@ void Sailonline::OnDcModify(wxCommandEvent& event) {
     }
   }
 
+  // Optimize maneuvers
+  // Note: This assumes a symmetric polar throughout
+  // Note: A course change of exactly 180 degrees will be treated as a tack (not
+  // sure what SOL does)
+  double first_twa = m_prace->m_dcs.begin()->m_twa;
+  second_dc =
+      first_dc;  // Old second_dc might have become invalid through erase()
+  ++second_dc;
+
+  for (auto p_dc = second_dc; p_dc != m_prace->m_dcs.end(); ++p_dc) {
+    double next_twa = p_dc->m_twa;
+    double sign = first_twa > 0.0 ? 1.0 : -1.0;
+    if (first_twa * next_twa > 0) {
+      // Course change. Performance loss is ca. 0.07% per degree
+      if (std::fabs(next_twa - first_twa) > course_change_for_max_loss) {
+        // Note: std::list::emplace() does not invalidate any iterators
+        // Note: Two seconds difference is required to preserve the order of the
+        // DCs
+        m_prace->m_dcs.emplace(
+            p_dc,
+            Dc{p_dc->m_timestamp.Subtract(wxTimeSpan::Seconds(2)), -1.0, -1.0,
+               -1.0, -1.0, first_twa + sign * course_change_for_max_loss, -1.0,
+               -1.0, -1.0, true});
+        // ... and the existing dc finalizes the course change to next_twa
+      }
+    } else if (std::fabs(first_twa - next_twa) > 180.0) {
+      // Jibe
+      /* The performance loss for a jibe is half the boat speed after the jibe,
+       * in percent. The performance loss for a course change (without jibe) is
+       * ca. 0.07% per degree There are two possible strategies:
+       * 1. Drive performance just below the 93% limit by two course changes.
+       *    Then jibe to next_twa without further performance loss.
+       *    This only makes sense if boat speed after the jibe is greater than
+       * 14 knots, because in this case the jibe performance loss would be
+       * greater than 7%
+       * 2. Jibe to TWA 180 degrees, then harden in to next_twa
+       *    This only makes sense if the added performance loss for jibe and
+       * course change is less than the performance loss for directly jibing to
+       * next_twa
+       */
+      double stw_before_wind = GetSpeedThroughWater(p_dc->m_tws, 180.0);
+      double next_stw = GetSpeedThroughWater(p_dc->m_tws, next_twa);
+
+      if (next_stw > 14.0) {
+        // Strategy 1
+        double twa_delta = 180.0 - std::fabs(first_twa);
+        // Change course upwind (delta1), then downwind to 180 degrees (delta2):
+        // 2 * twa_delta + 2 * delta1 = course_change_for_max_loss
+        double delta1 = 0.5 * course_change_for_max_loss - twa_delta;
+        m_prace->m_dcs.emplace(
+            p_dc,
+            Dc{p_dc->m_timestamp.Subtract(wxTimeSpan::Seconds(4)), -1.0, -1.0,
+               -1.0, -1.0, first_twa - sign * delta1, -1.0, -1.0, -1.0, true});
+        m_prace->m_dcs.emplace(
+            p_dc, Dc{p_dc->m_timestamp.Subtract(wxTimeSpan::Seconds(2)), -1.0,
+                     -1.0, -1.0, -1.0, sign * 180.0, -1.0, -1.0, -1.0, true});
+        // ... and the existing dc finalizes the course change to next_twa
+      } else {
+        // Strategy 2
+        // Performance loss for direct jibe to next_twa
+        double loss = get_performance_loss_tack_jibe(next_stw);
+        // Performance loss for jibe to 180 degrees, then course change to
+        // next_twa
+        double loss1 = get_performance_loss_tack_jibe(stw_before_wind);
+        double loss2 =
+            get_performance_loss_course_change(180.0, std::fabs(next_twa));
+        if (loss1 + loss2 < loss) {
+          m_prace->m_dcs.emplace(
+              p_dc, Dc{p_dc->m_timestamp.Subtract(wxTimeSpan::Seconds(2)), -1.0,
+                       -1.0, -1.0, -1.0, sign * 180.0, -1.0, -1.0, -1.0, true});
+          // ... and the existing dc finalizes the course change to next_twa
         }
+      }
+    } else {
+      // Tack
+      /* The performance loss for a tack is half the boat speed after the tack,
+       * in percent. The performance loss for a course change (without tack) is
+       * ca. 0.07% per degree Strategy: Tack to 0° (zero boat speed) with no
+       * performance loss Change course to next_twa
+       */
+      double next_speed = GetSpeedThroughWater(p_dc->m_tws, next_twa);
+      // Performance loss for direct tack to next_twa
+      double loss1 = get_performance_loss_tack_jibe(next_speed);
+      // Performance loss for course change from 0° to next_twa
+      double loss2 = get_performance_loss_course_change(0.0, next_twa);
+      if (loss1 > loss2) {
+        m_prace->m_dcs.emplace(
+            p_dc, Dc{p_dc->m_timestamp.Subtract(wxTimeSpan::Seconds(2)), -1.0,
+                     -1.0, -1.0, -1.0, -sign * 0.001, -1.0, -1.0, -1.0, true});
+        // ... and the existing dc finalizes the course change to next_twa
+      }
     }
 
-    FillDcList();
+    first_twa = next_twa;
+  }
+
+  FillDcList();
 }
 
 void Sailonline::OnCopyDcs(wxCommandEvent& event) {
