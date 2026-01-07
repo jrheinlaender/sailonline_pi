@@ -123,7 +123,7 @@ int sailonline_pi::Init(void) {
 
   LoadConfig();
 
-  return (WANTS_TOOLBAR_CALLBACK | WANTS_CONFIG);
+  return (WANTS_TOOLBAR_CALLBACK | WANTS_CONFIG | WANTS_PLUGIN_MESSAGING);
 }
 
 bool sailonline_pi::DeInit(void) {
@@ -167,6 +167,18 @@ void sailonline_pi::NewSol() {
   m_psailonline->Move(p);
 }
 
+void sailonline_pi::SetPluginMessage(wxString& message_id,
+                                     wxString& message_body) {
+  if (message_id == "GRIB_VALUES" || message_id == "WR_BOATDATA") {
+    Json::Value root;
+    Json::Reader reader;
+    if (reader.parse(static_cast<std::string>(message_body), root)) {
+      m_received_json_message = root;
+      m_received_message = message_body;
+    }
+  }
+}
+
 bool sailonline_pi::LoadConfig() {
   if (!m_pconfig) return false;
 
@@ -187,4 +199,12 @@ void sailonline_pi::OnToolbarToolCallback(int id) {
   if (!m_psailonline) NewSol();
 
   m_psailonline->Show(!m_psailonline->IsShown());
+}
+
+Json::Value sailonline_pi::GetJsonMessage() const {
+  if (m_received_message == wxEmptyString ||
+      m_received_json_message["Type"].asString() != "Reply")
+    return Json::nullValue;
+
+  return m_received_json_message;
 }

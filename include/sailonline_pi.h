@@ -109,8 +109,14 @@ public:
 
   wxFileConfig* GetConf() { return m_pconfig; }
 
+  Json::Value GetJsonMessage() const;
+
 private:
   Sailonline* m_psailonline;
+
+  // Variables to handle messaging
+  Json::Value m_received_json_message;
+  wxString m_received_message;
 
   wxWindow* m_pparent_window;
 
@@ -119,6 +125,8 @@ private:
   int m_leftclick_tool_id;
 
   void NewSol();
+
+  void SetPluginMessage(wxString& message_id, wxString& message_body);
 
   bool LoadConfig();
   bool SaveConfig();
