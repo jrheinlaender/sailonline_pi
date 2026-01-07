@@ -112,13 +112,13 @@ public:
   Json::Value GetJsonMessage() const;
 
 private:
-  Sailonline* m_psailonline;
+  Sailonline* m_psailonline = nullptr;
 
   // Variables to handle messaging
   Json::Value m_received_json_message;
   wxString m_received_message;
 
-  wxWindow* m_pparent_window;
+  wxWindow* m_pparent_window = nullptr;
 
   wxFileConfig* m_pconfig;
 

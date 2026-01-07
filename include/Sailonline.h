@@ -24,6 +24,7 @@
 #include <list>
 
 #include "ocpn_plugin.h"
+#include <json/json.h>
 
 #include "SailonlineUI.h"
 
@@ -75,7 +76,7 @@ private:
   std::vector<std::string> m_init_errors;
 
   std::vector<Race> m_races;
-  std::vector<Race>::iterator  m_prace;
+  std::vector<Race>::iterator m_prace;
 
   // Events
   void OnClose(wxCloseEvent& event) {
@@ -97,7 +98,8 @@ private:
   bool m_download_success;
   void CleanupDownload();
 
-  // Utility functions
+  // Dialogs
+
   // Messaging
   // Request grib values: True wind speed (knots) and true wind direction
   // (degrees)

@@ -21,6 +21,10 @@
 #include <wx/wx.h>
 #include <wx/window.h>
 #include <wx/clipbrd.h>
+#include <wx/datetime.h>
+
+#include <sstream>
+#include <curl/curl.h>
 
 #include <ocpn_plugin.h>
 #include <pugixml.hpp>
@@ -51,8 +55,8 @@ Sailonline::Sailonline(wxWindow* parent, sailonline_pi& plugin)
   int sashpos;
   pconf->Read("DialogX", &rect.x, rect.x);
   pconf->Read("DialogY", &rect.y, rect.y);
-  pconf->Read("DialogWidth", &rect.width, wxMax(rect.width, 600));
-  pconf->Read("DialogHeight", &rect.height, wxMax(rect.height, 450));
+  pconf->Read("DialogWidth", &rect.width, 800);
+  pconf->Read("DialogHeight", &rect.height, 450);
   pconf->Read("DialogSplit", &sashpos, rect.width / 4);
   SetPosition(rect.GetPosition());
   SetInitialSize(rect.GetSize());
@@ -62,11 +66,17 @@ Sailonline::Sailonline(wxWindow* parent, sailonline_pi& plugin)
   m_ppanel->m_pracelist->InsertColumn(0, _("Number"));
   m_ppanel->m_pracelist->InsertColumn(1, _("Name"));
 
+  // Check if we are online
+  if (!OCPN_isOnline()) {
+    m_init_errors.emplace_back("No internet access");
+    return;
+  }
+
   // Fill racelist
   // Build target filename
   wxString download_target = GetPluginDataDir("sailonline_pi")
                                  .Append(wxFileName::GetPathSeparator())
-                                 .Append("racelist");
+                                 .Append("data");
   if (!wxDirExists(download_target)) wxMkdir(download_target);
   download_target.Append(wxFileName::GetPathSeparator()).Append("racelist.xml");
   wxLogMessage("Downloading racelist to %s", download_target);
@@ -90,6 +100,7 @@ Sailonline::Sailonline(wxWindow* parent, sailonline_pi& plugin)
   while (m_downloading) {
     wxTheApp->ProcessPendingEvents();
     wxLogMessage("Waiting for download...");
+    wxYield();
     wxMilliSleep(1000);
   }
   if (!m_download_success) {
@@ -150,12 +161,14 @@ Sailonline::Sailonline(wxWindow* parent, sailonline_pi& plugin)
   m_ppanel->m_pracelist->Connect(wxEVT_LIST_ITEM_SELECTED,
                                  wxListEventHandler(Sailonline::OnRaceSelected),
                                  nullptr, this);
+
+  m_prace = m_races.begin();
   if (!m_races.empty())
     m_ppanel->m_pracelist->SetItemState(m_ppanel->m_pracelist->GetTopItem(),
                                         wxLIST_STATE_SELECTED,
                                         wxLIST_STATE_SELECTED);
 
-  m_prace = m_races.begin();
+  m_ppanel->m_notebook->SetSelection(0);  // Show first tab
 
   m_ppanel->m_pdclist->ClearAll();
   m_ppanel->m_pdclist->InsertColumn(0, _("Time"));
@@ -261,6 +274,7 @@ void Sailonline::OnRaceSelected(wxListEvent& event) {
   // Get race number
   long idx = event.GetIndex();
   wxString racenumber = m_ppanel->m_pracelist->GetItemText(idx, 0);
+  if (racenumber.IsEmpty()) return;
 
   // Fill first tab with information about the race
   m_ppanel->SetLabel(racenumber);
@@ -269,7 +283,7 @@ void Sailonline::OnRaceSelected(wxListEvent& event) {
     if (race_it->m_id == racenumber) {
       m_ppanel->m_racename->SetLabel(
           race_it->m_name);  // TODO Show only if race has not started yet.
-                         // Otherwise message is enough
+                             // Otherwise message is enough
       m_ppanel->m_racemsg->SetLabel(race_it->m_message);
       m_ppanel->m_racedesc->SetPage(race_it->m_description);
       m_ppanel->m_racedesc->SetSize(m_ppanel->m_racedata->GetClientSize());
@@ -794,7 +808,8 @@ void Sailonline::OnCopyDcs(wxCommandEvent& event) {
   for (const auto& dc : m_prace->m_dcs) {
     wxString timestamp = dc.m_timestamp.Format("%Y/%m/%d %H:%M:%S");
     wxString coursetype = (dc.m_is_twa ? "twa" : "cc");
-    wxString course = wxString::Format("%03.3f", dc.m_course);
+    wxString course =
+        wxString::Format("%03.3f", dc.m_is_twa ? dc.m_twa : dc.m_course);
 
     wxString line;
     line.Printf("%s %s %s %c", timestamp, coursetype, course, '\n');

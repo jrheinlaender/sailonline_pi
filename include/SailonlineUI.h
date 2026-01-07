@@ -145,7 +145,6 @@ class SailonlinePanel : public wxPanel
 	protected:
 		wxPanel* m_panel11;
 		wxPanel* m_panel12;
-		wxNotebook* m_notebook;
 		wxPanel* m_dcs;
 
 		// Virtual event handlers, override them in your derived class
@@ -167,6 +166,7 @@ class SailonlinePanel : public wxPanel
 	public:
 		wxSplitterWindow* m_psplitter;
 		wxListCtrl* m_pracelist;
+		wxNotebook* m_notebook;
 		wxPanel* m_racedata;
 		wxStaticText* m_racename;
 		wxStaticText* m_racemsg;

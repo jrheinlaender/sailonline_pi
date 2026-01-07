@@ -88,19 +88,18 @@ sailonline_pi::sailonline_pi(void* ppimgr) : opencpn_plugin_120(ppimgr) {
     m_panel_bitmap = wxBitmap(panel_icon);
   else
     wxLogWarning("Sailonline Navigation Panel icon has NOT been loaded");
-
-  m_psailonline = nullptr;
 }
 
 sailonline_pi::~sailonline_pi() {}
 
 int sailonline_pi::Init(void) {
+  std::cout << "SOL: Init()" << std::endl;
   // Adds local language support for the plugin to OCPN
   AddLocaleCatalog(PLUGIN_CATALOG_NAME);
 
   // Get a pointer to the opencpn configuration object
   m_pconfig = GetOCPNConfigObject();
-  m_pconfig->SetPath("/Plugins/Sailonline");
+  m_pconfig->SetPath("/PlugIns/Sailonline");
 
   // Get a pointer to the opencpn display canvas, to use as a parent for the
   // Sailonline dialog
