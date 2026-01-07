@@ -222,6 +222,39 @@ bool Sailonline::Show(bool show) {
   return SailonlineBase::Show(show);
 }
 
+std::string curl_extract_cookie(CURL* curl, const std::string& name) {
+  struct curl_slist* cookies = nullptr;
+  CURLcode result = curl_easy_getinfo(curl, CURLINFO_COOKIELIST, &cookies);
+  std::string cookie("");
+
+  if (result == CURLE_OK && cookies != nullptr) {
+    struct curl_slist* each = cookies;
+    while (each) {
+      std::string c(each->data);
+      size_t pos = c.find(name);
+
+      if (pos != std::string::npos) {
+        cookie = c.substr(pos + name.size() + 1);
+        break;
+      }
+
+      each = each->next;
+    }
+    curl_slist_free_all(cookies);
+  }
+
+  return cookie;
+}
+
+static size_t curl_write_cb(void* contents, size_t size, size_t nmemb,
+                            void* userp) {
+  wxLogMessage("Receiving %u bytes of data", size * nmemb);
+  size_t realsize = size * nmemb;
+  std::string* data = static_cast<std::string*>(userp);
+  data->append(static_cast<const char*>(contents), realsize);
+  return realsize;
+}
+
 void Sailonline::OnRaceSelected(wxListEvent& event) {
   // Get race number
   long idx = event.GetIndex();
@@ -243,6 +276,131 @@ void Sailonline::OnRaceSelected(wxListEvent& event) {
       break;
     }
     // TODO Clear panel if nothing is found?
+  }
+
+  // Log in to sailonline.org to get more specific data
+  // Note: wxWebRequest stores cookies in the wxWebSession but they are not
+  // accessible Note: OCPN_postDataHttp() does not handle cookies
+
+  CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
+  CURL* curl = curl_easy_init();
+
+  if (curl != nullptr) {
+    curl_easy_setopt(curl, CURLOPT_URL,
+                     "https://sailonline.org/community/accounts/login/");
+    curl_easy_setopt(
+        curl, CURLOPT_USERAGENT,
+        "libcurl-agent/1.0");  // Some servers don't like requests without
+    curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "");  // Enable cookie engine
+    // Setup function to catch the page contents. This also suppresses output on
+    // stdout
+    std::string pagedata;
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_cb);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&pagedata);
+    result = curl_easy_perform(curl);
+    std::string csrftoken = curl_extract_cookie(curl, "csrftoken");
+    // Note that URL remains the same
+    curl_easy_setopt(curl, CURLOPT_REFERER,
+                     "https://sailonline.org/community/accounts/login/"
+                     "?password=21shukur%3AGozorI21&username=Ibis");
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION,
+                     1L);  // redirects to https://sailonline.org/windy/run/xxxx
+    std::string postdata =
+        std::string("next=%2Fwindy%2Frun%2F") + racenumber.ToStdString() +
+        "%2F&password=21shukur%3AGozorI21&username=Ibis&csrfmiddlewaretoken=" +
+        csrftoken;
+    wxLogMessage("POST '%s'", postdata);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postdata.c_str());
+    pagedata.clear();
+    result = curl_easy_perform(curl);
+
+    size_t pos = pagedata.find("function getToken()\n{\n\treturn \"");
+    std::string racetoken("");
+    if (pos == std::string::npos) {
+      wxLogError("Could not find token for race %s, did you register?",
+                 racenumber);
+      curl_easy_cleanup(curl);
+      return;
+    } else
+      racetoken = pagedata.substr(pos + 31, 32);
+    wxLogMessage("Found token '%s' for race %s", racetoken, racenumber);
+    // Download detailed race data (XML format)
+    std::string race_url =
+        std::string("https://www.sailonline.org/webclient/auth_raceinfo_") +
+        racenumber.ToStdString() + ".xml?token=" + racetoken;
+    wxLogMessage("Downloading race xml data from %s", race_url);
+    curl_easy_setopt(curl, CURLOPT_URL, race_url.c_str());
+    curl_easy_setopt(curl, CURLOPT_HTTPGET,
+                     1L);  // Otherwise curl will try to POST
+
+    pagedata.clear();
+    result = curl_easy_perform(curl);
+
+    curl_easy_cleanup(curl);
+
+    pugi::xml_document race_doc;
+    auto status = race_doc.load_string(pagedata.c_str());
+    if (!status) {
+      wxLogError("Could not parse race file: %s", status.description());
+      return;
+    }
+
+    // Get boat polar
+    // TWS: Space-separated list of true wind speeds (columns, integer, knots)
+    // TWA: Space-separated list of true wind angles (rows, integer, degrees)
+    // BS: Semicolon-separated list of space-separated lists of wind speeds
+    // (float, m/s)
+    pugi::xml_node node_name =
+        race_doc.select_node("/race/boat/vpp/name").node();
+    pugi::xml_node node_tws =
+        race_doc.select_node("/race/boat/vpp/tws_splined").node();
+    pugi::xml_node node_twa =
+        race_doc.select_node("/race/boat/vpp/twa_splined").node();
+    pugi::xml_node node_bs =
+        race_doc.select_node("/race/boat/vpp/bs_splined").node();
+    std::string polar_name(node_name.first_child().value());
+    std::replace(polar_name.begin(), polar_name.end(), ' ', '_');
+    wxString download_target = GetPluginDataDir("sailonline_pi")
+                                   .Append(wxFileName::GetPathSeparator())
+                                   .Append("data")
+                                   .Append(wxFileName::GetPathSeparator())
+                                   .Append("Polar");
+    if (!wxDirExists(download_target)) wxMkdir(download_target);
+    download_target.Append(wxFileName::GetPathSeparator())
+        .Append("SOL_")
+        .Append(polar_name.c_str())
+        .Append("_polar.csv");
+    wxLogMessage("Writing boat polar to %s", download_target);
+    wxFile polar_file(download_target, wxFile::write);
+    if (polar_file.Error()) return;  // TODO Message
+
+    polar_file.Write("twa/tws;");
+    std::stringstream tws_stream(node_tws.first_child().value());
+    unsigned tws;
+    while (tws_stream >> tws) {
+      if (tws_stream.bad()) return;  // TODO Message
+      polar_file.Write(std::to_string(
+          tws * 3600.0 / 1852.0));  // TODO is this constant defined somewhere?
+      if (!tws_stream.eof()) polar_file.Write(";");
+    }
+    polar_file.Write("\n");
+
+    std::stringstream twa_stream(node_twa.first_child().value());
+    std::stringstream bss_stream(node_bs.first_child().value());
+    std::string twa;
+
+    while (twa_stream >> twa) {
+      std::string bs_line;
+      if (!std::getline(bss_stream, bs_line, ';')) return;  // TODO Message
+
+      polar_file.Write(twa);
+      polar_file.Write(";");
+      std::replace(bs_line.begin(), bs_line.end(), ' ', ';');
+      polar_file.Write(bs_line);
+      polar_file.Write("\n");
+    }
+
+    polar_file.Close();
   }
 
 }
