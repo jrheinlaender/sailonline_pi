@@ -617,26 +617,78 @@ void Sailonline::OnDcFromTrack(wxCommandEvent& event) {
   }
 }
 
+// ca. 100.3 degrees, course change required to reach 93% performance
+static constexpr double course_change_for_max_loss =
+    (0.07 + 0.005) * 180.0 / M_PI * 25.0;  // TODO Remove extra 0.5% for safety
+
 void Sailonline::OnDcModify(wxCommandEvent& event) {
-    if (m_prace->m_dcs.size() < 2)
-        return;
+  if (m_prace->m_dcs.size() < 2) return;
 
+  // Current leg is from first_dc to last_dc
+  auto first_dc = m_prace->m_dcs.begin();  // First DC of a leg
+  auto second_dc = first_dc;
+  ++second_dc;
+  auto last_dc = m_prace->m_dcs.begin();  // Last DC that was investigated
 
-    auto last_dc = m_prace->m_dcs.begin();
+  for (auto dc = second_dc; dc != m_prace->m_dcs.end();) {
+    double diff_course = std::fabs(dc->m_course - first_dc->m_course);
+    double diff_twa = std::fabs(dc->m_twa - first_dc->m_twa);
+    if (diff_course > 360.0) diff_course -= 360.0;
+    if (diff_twa > 360.0) diff_twa -= 360.0;
 
-    for (auto dc = last_dc + 1; dc != m_prace->m_dcs.end(); ) {
-        if (std::fabs(dc->m_course - last_dc->m_course) < 2.0)  {
-            // Course (almost) unchanged, remove this dc
-            // last_dc remains unchanged
-            dc = m_prace->m_dcs.erase(dc);
-        } else {
-            // Calculate new course (could be optimized to only calculate when intermediate dcs have been deleted)
-            // TODO No land collision check!!!
-            double new_dist;
-            DistanceBearingMercator_Plugin(dc->m_lat_start, dc->m_lon_start, last_dc->m_lat_start, last_dc->m_lon_start, &last_dc->m_course, &new_dist);
+    // Check for minimal course or twa changes and delete unnecessary waypoints
+    wxLogMessage(
+        "First DC: %3.3f, TWA %3.3f, last DC: %3.3f, TWA %3.3f, this DC: "
+        "%3.3f, TWA %3.3f",
+        first_dc->m_course, first_dc->m_twa, last_dc->m_course, last_dc->m_twa,
+        dc->m_course, dc->m_twa);
 
-            last_dc = dc;
-            ++dc;
+    if (diff_course < 2.0 && (!first_dc->m_is_twa || first_dc == last_dc)) {
+      wxLogMessage("Continuing current leg because of minimal course change");
+      first_dc->m_is_twa = false;
+      if (last_dc != first_dc)
+        last_dc = m_prace->m_dcs.erase(last_dc);
+      else
+        last_dc = dc;
+      dc = last_dc;
+      ++dc;
+    } else if (diff_twa < 1.0 && (first_dc->m_is_twa || first_dc == last_dc)) {
+      wxLogMessage("Continuing current leg because of minimal twa change");
+      first_dc->m_is_twa = true;
+      if (last_dc != first_dc)
+        last_dc = m_prace->m_dcs.erase(last_dc);
+      else
+        last_dc = dc;
+      dc = last_dc;
+      ++dc;
+    } else {
+      // Calculate new course / TWA
+      if (first_dc != last_dc) {
+        first_dc->m_twa =
+            0.5 *
+            (first_dc->m_twa +
+             last_dc
+                 ->m_twa);  // TODO calculate exact twa that will bring us from
+                            // start to end waypoint when course is finalized
+        double new_dist;
+        DistanceBearingMercator_Plugin(
+            last_dc->m_lat_start, last_dc->m_lon_start, first_dc->m_lat_start,
+            first_dc->m_lon_start, &first_dc->m_course, &new_dist);
+        wxLogMessage("Wrote DC: %3.3f, TWA %3.3f", first_dc->m_course,
+                     first_dc->m_twa);
+        first_dc = last_dc;
+        // Note: dc must not be incremented, leg between first_dc and dc has not
+        // been investigated yet
+      } else {
+        wxLogMessage("Wrote DC: %3.3f, TWA %3.3f", first_dc->m_course,
+                     first_dc->m_twa);
+        first_dc = dc;
+        last_dc = dc;
+        ++dc;
+      }
+    }
+  }
+
         }
     }
 
