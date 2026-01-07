@@ -161,9 +161,11 @@ Sailonline::Sailonline(wxWindow* parent, sailonline_pi& plugin)
   m_ppanel->m_pdclist->InsertColumn(0, _("Time"));
   m_ppanel->m_pdclist->InsertColumn(1, _("Type"));
   m_ppanel->m_pdclist->InsertColumn(2, _("Course"));
-  m_ppanel->m_pdclist->SetColumnWidth(0, wxLIST_AUTOSIZE);
-  m_ppanel->m_pdclist->SetColumnWidth(1, wxLIST_AUTOSIZE);
-  m_ppanel->m_pdclist->SetColumnWidth(2, wxLIST_AUTOSIZE);
+  m_ppanel->m_pdclist->InsertColumn(3, _("TWA"));
+  m_ppanel->m_pdclist->InsertColumn(4, _("Speed"));
+  m_ppanel->m_pdclist->InsertColumn(5, _("Opt"));
+  m_ppanel->m_pdclist->InsertColumn(6, _("Perf1"));
+  m_ppanel->m_pdclist->InsertColumn(7, _("Perf2"));
 
   m_ppanel->m_pbutton_download->Connect(
       wxEVT_COMMAND_BUTTON_CLICKED,
@@ -408,26 +410,148 @@ void Sailonline::OnRaceSelected(wxListEvent& event) {
 void Sailonline::OnDcDownload(wxCommandEvent& event) {}
 void Sailonline::OnDcUpload(wxCommandEvent& event) {}
 
+std::pair<double, double> Sailonline::GetWindData(const wxDateTime& t,
+                                                  double lat, double lon) {
+  Json::Value v;
+  Json::FastWriter writer;
+  wxDateTime time = t.FromUTC();
+  if (!time.IsValid()) return {-1.0, -1.0};
+
+  v["Day"] = time.GetDay();
+  v["Month"] = time.GetMonth();
+  v["Year"] = time.GetYear();
+  v["Hour"] = time.GetHour();
+  v["Minute"] = time.GetMinute();
+  v["Second"] = time.GetSecond();
+
+  v["Source"] = "SAILONLINE_PI";
+  v["Type"] = "Request";
+  v["Msg"] = "GRIB_VALUES_REQUEST";
+  v["lat"] = lat;
+  v["lon"] = lon;
+  v["WIND SPEED"] = 1;
+
+  SendPluginMessage("GRIB_VALUES_REQUEST", writer.write(v));
+  Json::Value reply = m_sailonline_pi.GetJsonMessage();
+  if (reply != Json::nullValue && reply.isMember("WIND SPEED") &&
+      reply.isMember("WIND DIR"))
+    return {reply["WIND SPEED"].asDouble() * 3600 / 1852,
+            reply["WIND DIR"].asDouble()};
+
+  return {-1.0, -1.0};
+}
+
+double Sailonline::GetSpeedThroughWater(double tws, double twa) {
+  Json::Value v;
+  Json::FastWriter writer;
+
+  v["Source"] = "SAILONLINE_PI";
+  v["Type"] = "Request";
+  v["Msg"] = "WR_BOATDATA_REQUEST";
+  v["Data"] = "Speed";
+  v["Racenumber"] = m_prace->m_id.ToStdString().c_str();
+  v["tws"] = tws;
+  v["twa"] = twa;
+
+  SendPluginMessage("WR_BOATDATA_REQUEST", writer.write(v));
+  Json::Value reply = m_sailonline_pi.GetJsonMessage();
+  if (reply != Json::nullValue && reply.isMember("BOAT SPEED"))
+    return reply["BOAT SPEED"].asDouble();
+
+  return -1.0;
+}
+
+std::pair<double, double> Sailonline::GetBoatOptimalAngles(double tws) {
+  Json::Value v;
+  Json::FastWriter writer;
+
+  v["Source"] = "SAILONLINE_PI";
+  v["Type"] = "Request";
+  v["Msg"] = "WR_BOATDATA_REQUEST";
+  v["Data"] = "Angles";
+  v["Racenumber"] = m_prace->m_id.ToStdString().c_str();
+  v["tws"] = tws;
+
+  SendPluginMessage("WR_BOATDATA_REQUEST", writer.write(v));
+  Json::Value reply = m_sailonline_pi.GetJsonMessage();
+  if (reply != Json::nullValue && reply.isMember("OPT UP") &&
+      reply.isMember("OPT DOWN"))
+    return {reply["OPT UP"].asDouble(), reply["OPT DOWN"].asDouble()};
+
+  return {-1.0, -1.0};
+}
+
 void Sailonline::FillDcList() {
-    if (m_prace == m_races.end())
-        return;
+  if (m_prace == m_races.end()) return;
 
-    m_ppanel->m_pdclist->DeleteAllItems();
+  m_ppanel->m_pdclist->DeleteAllItems();
 
-    for (const auto& dc : m_prace->m_dcs) {
-        wxListItem item;
-        long index = m_ppanel->m_pdclist->InsertItem(
-            m_ppanel->m_pdclist->GetItemCount(), item);
-        m_ppanel->m_pdclist->SetItem(
-            index, 0, dc.m_timestamp.Format("%Y/%m/%d %H:%M:%S"));
-        m_ppanel->m_pdclist->SetItem(index, 1, dc.m_is_twa ? "twa" : "cc");
-        m_ppanel->m_pdclist->SetItem(index, 2,
-                                    wxString::Format("%03.3f", dc.m_course));
-    }
+  for (const auto& dc : m_prace->m_dcs) {
+    wxListItem item;
+    long index = m_ppanel->m_pdclist->InsertItem(
+        m_ppanel->m_pdclist->GetItemCount(), item);
+    m_ppanel->m_pdclist->SetItem(index, 0,
+                                 dc.m_timestamp.Format("%Y/%m/%d %H:%M:%S"));
+    m_ppanel->m_pdclist->SetItem(index, 1, dc.m_is_twa ? "twa" : "cc");
+    m_ppanel->m_pdclist->SetItem(index, 2,
+                                 wxString::Format("%03.3f", dc.m_course));
+    m_ppanel->m_pdclist->SetItem(index, 3,
+                                 wxString::Format("%03.3f", dc.m_twa));
+    m_ppanel->m_pdclist->SetItem(index, 4, wxString::Format("%03.3f", dc.m_bs));
+    m_ppanel->m_pdclist->SetItem(
+        index, 5,
+        wxString::Format("%03.3f", std::fabs(dc.m_twa) < 90.0
+                                       ? dc.m_opt_upwind
+                                       : dc.m_opt_downwind));
+    m_ppanel->m_pdclist->SetItem(index, 6,
+                                 wxString::Format("%03.3f", dc.m_perf_begin));
+    m_ppanel->m_pdclist->SetItem(index, 7,
+                                 wxString::Format("%03.3f", dc.m_perf_end));
+  }
 
-    m_ppanel->m_pdclist->SetColumnWidth(0, wxLIST_AUTOSIZE);
-    m_ppanel->m_pdclist->SetColumnWidth(1, wxLIST_AUTOSIZE);
-    m_ppanel->m_pdclist->SetColumnWidth(2, wxLIST_AUTOSIZE);
+  for (int i = 0; i < m_ppanel->m_pdclist->GetColumnCount(); ++i)
+    m_ppanel->m_pdclist->SetColumnWidth(i, wxLIST_AUTOSIZE);
+}
+
+// Performance loss is half the boat speed after the tack/jibe, in percent.
+double get_performance_loss_tack_jibe(const double stw) {
+  return 0.5 * stw / 100.0;
+}
+
+// Performance loss is ca. 0.07% per degree
+// Assumes that first_twa and next_twa have the same sign
+double get_performance_loss_course_change(const double first_twa,
+                                          const double next_twa) {
+  return std::fabs(next_twa - first_twa) / 180.0 * M_PI / 25.0;
+}
+
+double get_performance(const double performance, const double stw,
+                       const double first_twa, const double next_twa) {
+  if (first_twa * next_twa > 0) {
+    // Course change
+    return performance -
+           get_performance_loss_course_change(first_twa, next_twa);
+  } else {
+    // Tack or jibe
+    return performance - get_performance_loss_tack_jibe(stw);
+  }
+}
+
+double get_recovery(const double performance, const double time_seconds,
+                    const double theoretical_stw) {
+  // Performance recovery
+  static constexpr int jump = 30.0;  // seconds
+  double current_stw = theoretical_stw * performance;
+  double newperformance = performance;
+  for (int j = 0; j < time_seconds; j += jump) {
+    if (newperformance > 0.9999) return 1.0;
+
+    newperformance = std::min(
+        1.0, newperformance + jump * 3.0 / (20.0 * current_stw) / 100.0);
+    current_stw = theoretical_stw * newperformance;
+  }
+
+  return newperformance;
 }
 
 void Sailonline::OnDcFromTrack(wxCommandEvent& event) {
@@ -438,23 +562,55 @@ void Sailonline::OnDcFromTrack(wxCommandEvent& event) {
     auto ptrack = GetTrack_Plugin(track_guid);
     if (ptrack == nullptr) return;
 
-    if (ptrack->pWaypointList->size() < 2)
-        return;
+    if (ptrack->pWaypointList->size() < 2) return;
 
     auto first_waypoint = ptrack->pWaypointList->begin();
     m_prace->m_dcs.clear();
+    double first_twa = 0.0;
+    double first_performance = 1.0;
 
-    for (auto waypoint = first_waypoint; waypoint != ptrack->pWaypointList->end(); ++waypoint) {
-        if (waypoint == first_waypoint)
-            continue;
+    for (auto waypoint = first_waypoint;
+         waypoint != ptrack->pWaypointList->end(); ++waypoint) {
+      if (waypoint == first_waypoint) continue;
 
       double bearing, distance;
       auto wp = *waypoint;
       auto first_wp = *first_waypoint;
-      DistanceBearingMercator_Plugin(wp->m_lat, wp->m_lon,
-                                     first_wp->m_lat, first_wp->m_lon, &bearing, &distance);
-      m_prace->m_dcs.emplace_back(Dc{first_wp->m_CreateTime, first_wp->m_lat, first_wp->m_lon, bearing, false});
+      DistanceBearingMercator_Plugin(wp->m_lat, wp->m_lon, first_wp->m_lat,
+                                     first_wp->m_lon, &bearing, &distance);
+
+      const auto [tws, twd] =
+          GetWindData(first_wp->m_CreateTime, first_wp->m_lat, first_wp->m_lon);
+      double twa = NAN;
+      if (tws >= 0.0) {
+        twa = twd - bearing;  // positive sign: starboard tack
+        if (twa < -180.0)
+          twa += 360.0;
+        else if (twa > 180.0)
+          twa -= 360.0;
+      }
+
+      const double stw = GetSpeedThroughWater(tws, twa);
+      auto [max_up, max_down] = GetBoatOptimalAngles(tws);
+      if (max_up > 180.0) max_up = 360.0 - max_up;
+      if (max_down > 180.0) max_down = 360.0 - max_down;
+      double sign = (twa > 0 ? 1.0 : -1.0);
+      // Performance right after the course change
+      double performance_start =
+          get_performance(first_performance, stw, first_twa, twa);
+      if (first_twa == 0.0) performance_start = 1.0;
+      double performance_end = get_recovery(
+          performance_start,
+          (wp->m_CreateTime - first_wp->m_CreateTime).GetSeconds().ToDouble(),
+          stw);
+
+      m_prace->m_dcs.emplace_back(
+          Dc{first_wp->m_CreateTime, first_wp->m_lat, first_wp->m_lon, bearing,
+             tws, twa, stw, max_up * sign, max_down * sign,
+             performance_start * 100, performance_end * 100, false});
       first_waypoint = waypoint;
+      first_twa = twa;
+      first_performance = performance_end;
     }
 
     FillDcList();

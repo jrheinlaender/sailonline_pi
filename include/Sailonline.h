@@ -21,7 +21,7 @@
 #define _SAILONLINE_H_
 
 #include <string>
-#include <vector>
+#include <list>
 
 #include "ocpn_plugin.h"
 
@@ -35,12 +35,19 @@ class FromTrackDialog;
  */
 class Sailonline : public SailonlineBase {
 private:
-    struct Dc {
-      wxDateTime m_timestamp;
-      double m_lat_start;
-      double m_lon_start;
-      double m_course;
-      bool m_is_twa;
+  struct Dc {
+    wxDateTime m_timestamp;
+    double m_lat_start;
+    double m_lon_start;
+    double m_course;
+    double m_tws;           // True wind speed
+    double m_twa;           // True wind angle
+    double m_bs;            // Boat speed through water
+    double m_opt_upwind;    // Optimal angle for going upwind
+    double m_opt_downwind;  // Optimal angle for going downwind
+    double m_perf_begin;    // Performance directly after course change
+    double m_perf_end;      // Performance directly before next course change
+    bool m_is_twa;
   };
   struct Race {
     wxString m_id;
@@ -50,7 +57,8 @@ private:
     wxString m_start;
     wxString m_url;
 
-    std::vector<Dc> m_dcs;
+    // This must be list because of element insertion in OnDcModify()
+    std::list<Dc> m_dcs;
   };
 
 public:
@@ -90,6 +98,17 @@ private:
   void CleanupDownload();
 
   // Utility functions
+  // Messaging
+  // Request grib values: True wind speed (knots) and true wind direction
+  // (degrees)
+  std::pair<double, double> GetWindData(const wxDateTime& t, double lat,
+                                        double lon);
+  // Request boat data: Boat speed (knots)
+  double GetSpeedThroughWater(double tws, double twa);
+  // Request boat data: optimal upwind angle (degrees), optimal downwind angle
+  // (degrees)
+  std::pair<double, double> GetBoatOptimalAngles(double tws);
+
   /// Update dc panel with data from m_prace->m_dcs
   void FillDcList();
 };
