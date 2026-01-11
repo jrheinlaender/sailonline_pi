@@ -688,16 +688,19 @@ void Sailonline::OnDcFromTrack(wxCommandEvent& event) {
   }
 }
 
-// ca. 100.3 degrees, course change required to reach 93% performance
+// Course change required to reach 93% performance is ca. 100.3 degrees
+// Add 4 seconds of performance recovery at 5kn
+static constexpr double max_recovery = 4.0 * 3.0 / (20.0 * 5.0) / 100.0;
 static constexpr double course_change_for_max_loss =
-    (0.07 + 0.005) * 180.0 / M_PI * 25.0;  // TODO Remove extra 0.5% for safety
+    (0.07 + max_recovery) * 180.0 / M_PI * 25.0;
 
 void Sailonline::OnDcModify(wxCommandEvent& event) {
   if (m_prace->m_dcs.size() < 2) return;
 
   // Current leg is from first_dc to last_dc
   auto first_dc = m_prace->m_dcs.begin();  // First DC of a leg
-  auto second_dc = first_dc;
+  auto second_dc =
+      first_dc;  // Required because std::list does not allow first_dc + 1
   ++second_dc;
   auto last_dc = m_prace->m_dcs.begin();  // Last DC that was investigated
 
@@ -762,10 +765,12 @@ void Sailonline::OnDcModify(wxCommandEvent& event) {
 
   // Optimize maneuvers
   // Note: This assumes a symmetric polar throughout
-  // Note: A course change of exactly 180 degrees will be treated as a tack (not
-  // sure what SOL does)
+  // Note: A course change of exactly 180 degrees will be treated as a tack
+  // (not sure what SOL does)
   double first_twa = m_prace->m_dcs.begin()->m_twa;
-  second_dc = m_prace->m_dcs.begin();  // Old second_dc might have become invalid through erase()
+  second_dc =
+      m_prace->m_dcs
+          .begin();  // Old second_dc might have become invalid through erase()
   ++second_dc;
 
   for (auto p_dc = second_dc; p_dc != m_prace->m_dcs.end(); ++p_dc) {
@@ -779,9 +784,9 @@ void Sailonline::OnDcModify(wxCommandEvent& event) {
         // DCs
         m_prace->m_dcs.emplace(
             p_dc,
-            Dc{wxDateTime(p_dc->m_timestamp).Subtract(wxTimeSpan::Seconds(2)), -1.0, -1.0,
-               -1.0, -1.0, first_twa + sign * course_change_for_max_loss, -1.0,
-               -1.0, -1.0, -1.0, -1.0, true});
+            Dc{wxDateTime(p_dc->m_timestamp).Subtract(wxTimeSpan::Seconds(2)),
+               -1.0, -1.0, first_twa + sign * course_change_for_max_loss,
+               true});
         // ... and the existing dc finalizes the course change to next_twa
       }
     } else if (std::fabs(first_twa - next_twa) > 180.0) {
@@ -806,15 +811,16 @@ void Sailonline::OnDcModify(wxCommandEvent& event) {
         // Strategy 1
         double twa_delta = 180.0 - std::fabs(first_twa);
         // Change course upwind (delta1), then downwind to 180 degrees (delta2):
-        // 2 * twa_delta + 2 * delta1 = course_change_for_max_loss
-        double delta1 = 0.5 * course_change_for_max_loss - twa_delta;
+        // twa_delta + 2 * delta1 = course_change_for_max_loss
+        double delta1 = 0.5 * (course_change_for_max_loss - twa_delta);
         m_prace->m_dcs.emplace(
             p_dc,
-            Dc{wxDateTime(p_dc->m_timestamp).Subtract(wxTimeSpan::Seconds(4)), -1.0, -1.0,
-               -1.0, -1.0, first_twa - sign * delta1, -1.0, -1.0, -1.0, -1.0, -1.0, true});
+            Dc{wxDateTime(p_dc->m_timestamp).Subtract(wxTimeSpan::Seconds(4)),
+               -1.0, -1.0, first_twa - sign * delta1, true});
         m_prace->m_dcs.emplace(
-            p_dc, Dc{wxDateTime(p_dc->m_timestamp).Subtract(wxTimeSpan::Seconds(2)), -1.0,
-                     -1.0, -1.0, -1.0, sign * 180.0, -1.0, -1.0, -1.0, -1.0, -1.0, true});
+            p_dc,
+            Dc{wxDateTime(p_dc->m_timestamp).Subtract(wxTimeSpan::Seconds(2)),
+               -1.0, -1.0, sign * 180.0, true});
         // ... and the existing dc finalizes the course change to next_twa
       } else {
         // Strategy 2
@@ -827,8 +833,9 @@ void Sailonline::OnDcModify(wxCommandEvent& event) {
             get_performance_loss_course_change(180.0, std::fabs(next_twa));
         if (loss1 + loss2 < loss) {
           m_prace->m_dcs.emplace(
-              p_dc, Dc{wxDateTime(p_dc->m_timestamp).Subtract(wxTimeSpan::Seconds(2)), -1.0,
-                       -1.0, -1.0, -1.0, sign * 180.0, -1.0, -1.0, -1.0, -1.0, -1.0, true});
+              p_dc,
+              Dc{wxDateTime(p_dc->m_timestamp).Subtract(wxTimeSpan::Seconds(2)),
+                 -1.0, -1.0, sign * 180.0, true});
           // ... and the existing dc finalizes the course change to next_twa
         }
       }
@@ -846,8 +853,9 @@ void Sailonline::OnDcModify(wxCommandEvent& event) {
       double loss2 = get_performance_loss_course_change(0.0, next_twa);
       if (loss1 > loss2) {
         m_prace->m_dcs.emplace(
-            p_dc, Dc{wxDateTime(p_dc->m_timestamp).Subtract(wxTimeSpan::Seconds(2)), -1.0,
-                     -1.0, -1.0, -1.0, -sign * 0.001, -1.0, -1.0, -1.0, -1.0, -1.0, true});
+            p_dc,
+            Dc{wxDateTime(p_dc->m_timestamp).Subtract(wxTimeSpan::Seconds(2)),
+               -1.0, -1.0, -sign * 0.001, true});
         // ... and the existing dc finalizes the course change to next_twa
       }
     }
