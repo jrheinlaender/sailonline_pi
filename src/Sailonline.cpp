@@ -34,6 +34,74 @@
 #include "SolApi.h"
 #include "FromTrackDialog.h"
 
+namespace {
+
+// Performance loss is half the boat speed after the tack/jibe, in percent.
+double get_performance_loss_tack_jibe(const double stw) {
+  return 0.5 * stw / 100.0;
+}
+
+// Performance loss is ca. 0.07% per degree
+// Assumes that first_twa and next_twa have the same sign
+double get_performance_loss_course_change(const double first_twa,
+                                          const double next_twa) {
+  return std::fabs(next_twa - first_twa) / 180.0 * M_PI / 25.0;
+}
+
+double get_performance(const double performance, const double stw,
+                       const double first_twa, const double next_twa) {
+  if (performance < 0.93) return performance;
+
+  if (first_twa * next_twa > 0) {
+    // Course change
+    return performance -
+           get_performance_loss_course_change(first_twa, next_twa);
+  } else {
+    // Tack or jibe
+    return performance - get_performance_loss_tack_jibe(stw);
+  }
+}
+
+double get_recovery(const double performance, const double time_seconds,
+                    const double theoretical_stw) {
+  if (performance >= 1.0) return 1.0;
+
+  double jump =
+      std::min(time_seconds, 20.0);  // TODO Find correct value for jump
+  double current_stw = theoretical_stw * performance;
+  double newperformance = performance;
+  double current_time;
+
+  for (current_time = jump; current_time <= time_seconds;
+       current_time += jump) {
+    newperformance = newperformance + jump * 3.0 / (20.0 * current_stw) / 100.0;
+    if (newperformance >= 1.0) return 1.0;
+
+    current_stw = theoretical_stw * newperformance;
+  }
+
+  // Remaining fractional jump
+  double remainder = time_seconds - current_time;
+  if (remainder > 0.0)
+    return std::min(
+        1.0, newperformance + remainder * 3.0 / (20.0 * current_stw) / 100.0);
+
+  return newperformance;
+}
+}  // namespace
+
+Dc::Dc(const wxDateTime& timestamp, const double lat_start,
+       const double lon_start, const double course, const bool is_twa)
+    : m_timestamp(timestamp),
+      m_lat_start(lat_start),
+      m_lon_start(lon_start),
+      m_is_twa(is_twa) {
+  if (m_is_twa)
+    m_twa = course;
+  else
+    m_course = course;
+}
+
 Sailonline::Sailonline(wxWindow* parent, sailonline_pi& plugin)
     : SailonlineBase(parent), m_sailonline_pi(plugin), m_ppanel(nullptr) {
   wxLogMessage("Initializing Sailonline GUI");
@@ -500,72 +568,91 @@ void Sailonline::FillDcList() {
 
   m_ppanel->m_pdclist->DeleteAllItems();
 
-  for (const auto& dc : m_prace->m_dcs) {
+  auto previous_dc = m_prace->m_dcs.begin();
+
+  for (auto dc = m_prace->m_dcs.begin(); dc != m_prace->m_dcs.end(); ++dc) {
+    // Calculate extra values
+    if (dc->m_lat_start == -1.0 && dc != m_prace->m_dcs.begin()) {
+      // DC course change optimization doesn't fill these fields
+      double dist =
+          previous_dc->m_stw *
+          (dc->m_timestamp - previous_dc->m_timestamp).GetSeconds().ToDouble() /
+          3600.0;
+      PositionBearingDistanceMercator_Plugin(
+          previous_dc->m_lat_start, previous_dc->m_lon_start,
+          previous_dc->m_course, dist, &dc->m_lat_start, &dc->m_lon_start);
+    }
+
+    double twd;
+    std::tie(dc->m_tws, twd) =
+        GetWindData(dc->m_timestamp, dc->m_lat_start, dc->m_lon_start);
+    if (dc->m_is_twa) {
+      dc->m_course = twd - dc->m_twa;
+      if (dc->m_course > 360.0)
+        dc->m_course -= 360.0;
+      else if (dc->m_course < 0.0)
+        dc->m_course += 360.0;
+    } else {
+      // Get TWA from course
+      dc->m_twa = NAN;
+      if (dc->m_tws >= 0.0) {
+        dc->m_twa = twd - dc->m_course;  // positive sign: starboard tack
+        if (dc->m_twa < -180.0)
+          dc->m_twa += 360.0;
+        else if (dc->m_twa > 180.0)
+          dc->m_twa -= 360.0;
+      }
+    }
+
+    dc->m_stw = GetSpeedThroughWater(dc->m_tws, dc->m_twa);
+    auto [max_up, max_down] = GetBoatOptimalAngles(dc->m_tws);
+    if (max_up > 180.0) max_up = 360.0 - max_up;
+    if (max_down > 180.0) max_down = 360.0 - max_down;
+    double sign = (dc->m_twa > 0 ? 1.0 : -1.0);
+    dc->m_opt_upwind = max_up * sign;
+    dc->m_opt_downwind = max_down * sign;
+    // Performance right after the course change
+    dc->m_perf_begin = (previous_dc->m_twa == 0.0)
+                           ? 1.0
+                           : get_performance(previous_dc->m_perf_end, dc->m_stw,
+                                             previous_dc->m_twa, dc->m_twa);
+    auto next_dc = dc;
+    ++next_dc;
+    dc->m_perf_end = (next_dc == m_prace->m_dcs.end())
+                         ? 1.0
+                         : get_recovery(dc->m_perf_begin,
+                                        (next_dc->m_timestamp - dc->m_timestamp)
+                                            .GetSeconds()
+                                            .ToDouble(),
+                                        dc->m_stw);
+
     wxListItem item;
     long index = m_ppanel->m_pdclist->InsertItem(
         m_ppanel->m_pdclist->GetItemCount(), item);
     m_ppanel->m_pdclist->SetItem(index, 0,
-                                 dc.m_timestamp.Format("%Y/%m/%d %H:%M:%S"));
-    m_ppanel->m_pdclist->SetItem(index, 1, dc.m_is_twa ? "twa" : "cc");
+                                 dc->m_timestamp.Format("%Y/%m/%d %H:%M:%S"));
+    m_ppanel->m_pdclist->SetItem(index, 1, dc->m_is_twa ? "twa" : "cc");
     m_ppanel->m_pdclist->SetItem(index, 2,
-                                 wxString::Format("%03.3f", dc.m_course));
+                                 wxString::Format("%03.3f", dc->m_course));
     m_ppanel->m_pdclist->SetItem(index, 3,
-                                 wxString::Format("%03.3f", dc.m_twa));
-    m_ppanel->m_pdclist->SetItem(index, 4, wxString::Format("%03.3f", dc.m_bs));
+                                 wxString::Format("%03.3f", dc->m_twa));
+    m_ppanel->m_pdclist->SetItem(index, 4,
+                                 wxString::Format("%03.3f", dc->m_stw));
     m_ppanel->m_pdclist->SetItem(
         index, 5,
-        wxString::Format("%03.3f", std::fabs(dc.m_twa) < 90.0
-                                       ? dc.m_opt_upwind
-                                       : dc.m_opt_downwind));
-    m_ppanel->m_pdclist->SetItem(index, 6,
-                                 wxString::Format("%03.3f", dc.m_perf_begin));
-    m_ppanel->m_pdclist->SetItem(index, 7,
-                                 wxString::Format("%03.3f", dc.m_perf_end));
+        wxString::Format("%03.3f", std::fabs(dc->m_twa) < 90.0
+                                       ? dc->m_opt_upwind
+                                       : dc->m_opt_downwind));
+    m_ppanel->m_pdclist->SetItem(
+        index, 6, wxString::Format("%03.3f", dc->m_perf_begin * 100));
+    m_ppanel->m_pdclist->SetItem(
+        index, 7, wxString::Format("%03.3f", dc->m_perf_end * 100));
+
+    previous_dc = dc;
   }
 
   for (int i = 0; i < m_ppanel->m_pdclist->GetColumnCount(); ++i)
     m_ppanel->m_pdclist->SetColumnWidth(i, wxLIST_AUTOSIZE);
-}
-
-// Performance loss is half the boat speed after the tack/jibe, in percent.
-double get_performance_loss_tack_jibe(const double stw) {
-  return 0.5 * stw / 100.0;
-}
-
-// Performance loss is ca. 0.07% per degree
-// Assumes that first_twa and next_twa have the same sign
-double get_performance_loss_course_change(const double first_twa,
-                                          const double next_twa) {
-  return std::fabs(next_twa - first_twa) / 180.0 * M_PI / 25.0;
-}
-
-double get_performance(const double performance, const double stw,
-                       const double first_twa, const double next_twa) {
-  if (first_twa * next_twa > 0) {
-    // Course change
-    return performance -
-           get_performance_loss_course_change(first_twa, next_twa);
-  } else {
-    // Tack or jibe
-    return performance - get_performance_loss_tack_jibe(stw);
-  }
-}
-
-double get_recovery(const double performance, const double time_seconds,
-                    const double theoretical_stw) {
-  // Performance recovery
-  static constexpr int jump = 30.0;  // seconds
-  double current_stw = theoretical_stw * performance;
-  double newperformance = performance;
-  for (int j = 0; j < time_seconds; j += jump) {
-    if (newperformance > 0.9999) return 1.0;
-
-    newperformance = std::min(
-        1.0, newperformance + jump * 3.0 / (20.0 * current_stw) / 100.0);
-    current_stw = theoretical_stw * newperformance;
-  }
-
-  return newperformance;
 }
 
 void Sailonline::OnDcFromTrack(wxCommandEvent& event) {
@@ -580,8 +667,6 @@ void Sailonline::OnDcFromTrack(wxCommandEvent& event) {
 
     auto first_waypoint = ptrack->pWaypointList->begin();
     m_prace->m_dcs.clear();
-    double first_twa = 0.0;
-    double first_performance = 1.0;
 
     for (auto waypoint = first_waypoint;
          waypoint != ptrack->pWaypointList->end(); ++waypoint) {
@@ -593,38 +678,10 @@ void Sailonline::OnDcFromTrack(wxCommandEvent& event) {
       DistanceBearingMercator_Plugin(wp->m_lat, wp->m_lon, first_wp->m_lat,
                                      first_wp->m_lon, &bearing, &distance);
 
-      const auto [tws, twd] =
-          GetWindData(first_wp->m_CreateTime, first_wp->m_lat, first_wp->m_lon);
-      double twa = NAN;
-      if (tws >= 0.0) {
-        twa = twd - bearing;  // positive sign: starboard tack
-        if (twa < -180.0)
-          twa += 360.0;
-        else if (twa > 180.0)
-          twa -= 360.0;
-      }
+      m_prace->m_dcs.emplace_back(Dc{first_wp->m_CreateTime, first_wp->m_lat,
+                                     first_wp->m_lon, bearing, false});
 
-      const double stw = GetSpeedThroughWater(tws, twa);
-      auto [max_up, max_down] = GetBoatOptimalAngles(tws);
-      if (max_up > 180.0) max_up = 360.0 - max_up;
-      if (max_down > 180.0) max_down = 360.0 - max_down;
-      double sign = (twa > 0 ? 1.0 : -1.0);
-      // Performance right after the course change
-      double performance_start =
-          get_performance(first_performance, stw, first_twa, twa);
-      if (first_twa == 0.0) performance_start = 1.0;
-      double performance_end = get_recovery(
-          performance_start,
-          (wp->m_CreateTime - first_wp->m_CreateTime).GetSeconds().ToDouble(),
-          stw);
-
-      m_prace->m_dcs.emplace_back(
-          Dc{first_wp->m_CreateTime, first_wp->m_lat, first_wp->m_lon, bearing,
-             tws, twa, stw, max_up * sign, max_down * sign,
-             performance_start * 100, performance_end * 100, false});
       first_waypoint = waypoint;
-      first_twa = twa;
-      first_performance = performance_end;
     }
 
     FillDcList();
