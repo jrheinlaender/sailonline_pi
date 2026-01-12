@@ -48,7 +48,7 @@ double get_performance_loss_course_change(const double first_twa,
   return std::fabs(next_twa - first_twa) / 180.0 * M_PI / 25.0;
 }
 
-double get_performance(const double performance, const double stw,
+double get_performance(const double performance, const double theoretical_stw,
                        const double first_twa, const double next_twa) {
   if (performance < 0.93) return performance;
 
@@ -58,8 +58,13 @@ double get_performance(const double performance, const double stw,
            get_performance_loss_course_change(first_twa, next_twa);
   } else {
     // Tack or jibe
-    return performance - get_performance_loss_tack_jibe(stw);
+    return performance - get_performance_loss_tack_jibe(theoretical_stw * performance);
   }
+}
+
+double get_recovery_step(const double performance, const double step_seconds,
+                    const double stw) {
+    return std::min(1.0, performance + step_seconds * 3.0 / (20.0 * stw) / 100.0);
 }
 
 double get_recovery(const double performance, const double time_seconds,
@@ -67,14 +72,14 @@ double get_recovery(const double performance, const double time_seconds,
   if (performance >= 1.0) return 1.0;
 
   double jump =
-      std::min(time_seconds, 20.0);  // TODO Find correct value for jump
+      std::min(time_seconds, 30.0);  // TODO Find correct value for jump
   double current_stw = theoretical_stw * performance;
   double newperformance = performance;
   double current_time;
 
   for (current_time = jump; current_time <= time_seconds;
        current_time += jump) {
-    newperformance = newperformance + jump * 3.0 / (20.0 * current_stw) / 100.0;
+    newperformance = get_recovery_step(newperformance, jump, current_stw);
     if (newperformance >= 1.0) return 1.0;
 
     current_stw = theoretical_stw * newperformance;
@@ -83,8 +88,7 @@ double get_recovery(const double performance, const double time_seconds,
   // Remaining fractional jump
   double remainder = time_seconds - current_time;
   if (remainder > 0.0)
-    return std::min(
-        1.0, newperformance + remainder * 3.0 / (20.0 * current_stw) / 100.0);
+    return get_recovery_step(newperformance, remainder, current_stw);
 
   return newperformance;
 }

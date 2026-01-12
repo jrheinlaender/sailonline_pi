@@ -32,24 +32,32 @@ class sailonline_pi;
 class FromTrackDialog;
 
 /**
- * Class that handles the main Sailonline  functionality.
+ * Class that handles SOL delayed commands
  */
-class Sailonline : public SailonlineBase {
-private:
-  struct Dc {
+class Dc {
+public:
     wxDateTime m_timestamp;
     double m_lat_start;
     double m_lon_start;
     double m_course;
     double m_tws;           // True wind speed
     double m_twa;           // True wind angle
-    double m_bs;            // Boat speed through water
+    double m_stw;            // Boat speed through water
     double m_opt_upwind;    // Optimal angle for going upwind
     double m_opt_downwind;  // Optimal angle for going downwind
     double m_perf_begin;    // Performance directly after course change
     double m_perf_end;      // Performance directly before next course change
     bool m_is_twa;
+
+    Dc(const wxDateTime& m_timestamp, const double m_lat_start, const double m_lon_start,
+       const double m_course, const bool m_is_twa);
   };
+
+/**
+ * Class that handles the main Sailonline  functionality.
+ */
+class Sailonline : public SailonlineBase {
+private:
   struct Race {
     wxString m_id;
     wxString m_name;
