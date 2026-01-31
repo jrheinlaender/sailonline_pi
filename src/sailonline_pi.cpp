@@ -30,6 +30,8 @@
 #endif  // precompiled headers
 
 #include "sailonline_pi.h"
+#include "SailonlineUi.h"
+#include "Sailonline.h"
 
 extern "C" DECL_EXP opencpn_plugin* create_pi(void* ppimgr) {
   return new sailonline_pi(ppimgr);
@@ -105,7 +107,8 @@ int sailonline_pi::Init(void) {
   // Sailonline dialog
   m_pparent_window = GetOCPNCanvasWindow();
 
-  m_psailonline = nullptr;
+  m_psailonline.reset();
+  m_pui = nullptr;
 
 #ifdef PLUGIN_USE_SVG
   m_leftclick_tool_id = InsertPlugInToolSVG(
@@ -126,10 +129,12 @@ int sailonline_pi::Init(void) {
 }
 
 bool sailonline_pi::DeInit(void) {
-  if (m_psailonline) m_psailonline->Close();
-  Sailonline* sol = m_psailonline;
-  m_psailonline = nullptr; /* needed first as destructor may call event loop */
-  delete sol;
+  if (m_pui) m_pui->Close();
+  SailonlineUi* pui = m_pui;
+  m_pui = nullptr; /* needed first as destructor may call event loop */
+  delete pui;
+
+  m_psailonline.reset();
 
   return true;
 }
@@ -158,12 +163,16 @@ int sailonline_pi::GetToolbarToolCount(void) { return 1; }
 void sailonline_pi::ShowPreferencesDialog(wxWindow* parent) {}
 
 void sailonline_pi::NewSol() {
-  if (m_psailonline) return;
+  if (m_pui) return;
 
-  m_psailonline = new Sailonline(m_pparent_window, *this);
-  wxPoint p = m_psailonline->GetPosition();
-  m_psailonline->Move(0, 0);  // workaround for gtk autocentre dialog behavior
-  m_psailonline->Move(p);
+  // Create this first, so that race data can be prepared
+  m_psailonline = std::make_shared<Sailonline>(*this);
+  auto errors = m_psailonline->GetErrors();
+
+  m_pui = new SailonlineUi(m_pparent_window, *this);
+  wxPoint p = m_pui->GetPosition();
+  m_pui->Move(0, 0);  // workaround for gtk autocentre dialog behavior
+  m_pui->Move(p);
 }
 
 void sailonline_pi::SetPluginMessage(wxString& message_id,
@@ -197,7 +206,7 @@ bool sailonline_pi::SaveConfig() {
 void sailonline_pi::OnToolbarToolCallback(int id) {
   if (!m_psailonline) NewSol();
 
-  m_psailonline->Show(!m_psailonline->IsShown());
+  m_pui->Show(!m_pui->IsShown());
 }
 
 Json::Value sailonline_pi::GetJsonMessage() const {

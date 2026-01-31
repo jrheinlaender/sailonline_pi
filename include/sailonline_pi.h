@@ -71,7 +71,8 @@
 
 #include "ocpn_plugin.h"
 
-#include "Sailonline.h"
+class SailonlineUi;
+class Sailonline;
 
 //----------------------------------------------------------------------------------------------------------
 //    The PlugIn Class Definition
@@ -106,13 +107,16 @@ public:
   void OnToolbarToolCallback(int id);
 
   wxWindow* GetParentWindow() { return m_pparent_window; }
+  const std::shared_ptr<Sailonline> GetSol() const { return m_psailonline; }
 
   wxFileConfig* GetConf() { return m_pconfig; }
 
   Json::Value GetJsonMessage() const;
 
 private:
-  Sailonline* m_psailonline = nullptr;
+  // No shared_ptr: Must be compatible to wxWindow* for initializing dialogs
+  SailonlineUi* m_pui = nullptr;
+  std::shared_ptr<Sailonline> m_psailonline = nullptr;
 
   // Variables to handle messaging
   Json::Value m_received_json_message;
