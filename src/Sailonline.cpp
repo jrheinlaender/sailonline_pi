@@ -31,7 +31,7 @@
 
   // Check if we are online
   if (!OCPN_isOnline()) {
-    m_init_errors.emplace_back("No internet access");
+    m_errors.emplace_back("No internet access");
     return;
   }
 
@@ -52,11 +52,10 @@
   m_downloading = true;
   m_download_success = true;
   m_download_handle = 0;
-  m_init_errors.clear();
   if (!(OCPN_downloadFileBackground(SolApi::kUrlRacelist, download_target, this,
                                     &m_download_handle) == OCPN_DL_STARTED)) {
-    m_init_errors.emplace_back("Failed to initiate download of racelist " +
-                               SolApi::kUrlRacelist);
+    m_errors.emplace_back("Failed to initiate download of racelist " +
+                          SolApi::kUrlRacelist);
     return;
   }
 
@@ -67,8 +66,8 @@
     wxMilliSleep(1000);
   }
   if (!m_download_success) {
-    m_init_errors.emplace_back("Failed to download racelist " +
-                               SolApi::kUrlRacelist);
+    m_errors.emplace_back("Failed to download racelist " +
+                          SolApi::kUrlRacelist);
     return;
   }
 
@@ -87,7 +86,7 @@
   for (pugi::xml_node node_race = node_races.first_child(); node_race;
        node_race = node_race.next_sibling()) {
     if (strcmp(node_race.name(), "race") == 0) {
-      Race race;
+      Race race(m_sailonline_pi);
 
       for (pugi::xml_node node_race_child = node_race.first_child();
            node_race_child; node_race_child = node_race_child.next_sibling()) {
@@ -112,7 +111,7 @@
         }
       }
 
-      m_races.emplace_back(std::move(race));
+      m_races.emplace(race.m_id, std::move(race));
     }
   }
 }
@@ -122,10 +121,17 @@ Sailonline::~Sailonline() {
 
 }
 
+std::unique_ptr<Race> Sailonline::GetRace(const std::string& racenumber) const {
+  auto prace = m_races.find(racenumber);
+  if (prace == m_races.end()) return nullptr;
 
-  return cookie;
+  return std::make_unique<Race>(prace->second);
 }
 
+std::vector<std::string> Sailonline::GetErrors() {
+  std::vector<std::string> result;
+  std::swap(m_errors, result);
+  return result;
 }
 
 void Sailonline::OnRaceSelected(wxListEvent& event) {

@@ -43,16 +43,19 @@ public:
   Sailonline(sailonline_pi& plugin);
   ~Sailonline();
 
+  /// Return error messages and clear the error store
+  std::vector<std::string> GetErrors();
+
+  const std::unordered_map<std::string, Race>& GetRaces() const { return m_races; }
+  std::unique_ptr<Race> GetRace(const std::string& racenumber) const;
   bool Show(bool show);
 
 private:
   sailonline_pi& m_sailonline_pi;
 
+  std::vector<std::string> m_errors;
 
-  std::vector<std::string> m_init_errors;
-
-  std::vector<Race> m_races;
-  std::vector<Race>::iterator m_prace;
+  std::unordered_map<std::string, Race> m_races;
 
   // Downloading
   void OnDownloadEvent(OCPN_downloadEvent& ev);
