@@ -181,6 +181,7 @@ set(SRCS
     src/SailonlineUi.cpp
     src/SailonlineUiBase.cpp
     src/FromTrackDialog.cpp
+    src/Race.cpp
 )
 
 set(HDRS
@@ -190,6 +191,7 @@ set(HDRS
     include/SailonlineUi.h
     include/SailonlineUiBase.h
     include/FromTrackDialog.h
+    include/Race.h
 )
 
 add_definitions(-DPLUGIN_USE_SVG)
