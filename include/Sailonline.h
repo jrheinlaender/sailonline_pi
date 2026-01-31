@@ -20,12 +20,9 @@
 #ifndef _SAILONLINE_H_
 #define _SAILONLINE_H_
 
-#include <string>
-#include <list>
+#include <wx/event.h>
 
-#include "ocpn_plugin.h"
-#include <json/json.h>
-
+#include <ocpn_plugin.h>
 
 class sailonline_pi;
 class Race;
@@ -33,12 +30,7 @@ class Race;
 /**
  * Class that handles the Sailonline data.
  */
-public:
-/**
- * Class that handles the main Sailonline  functionality.
- */
-class Sailonline : public SailonlineBase {
-
+class Sailonline : wxEvtHandler {
 public:
   Sailonline(sailonline_pi& plugin);
   ~Sailonline();
@@ -48,7 +40,6 @@ public:
 
   const std::unordered_map<std::string, Race>& GetRaces() const { return m_races; }
   std::unique_ptr<Race> GetRace(const std::string& racenumber) const;
-  bool Show(bool show);
 
 private:
   sailonline_pi& m_sailonline_pi;

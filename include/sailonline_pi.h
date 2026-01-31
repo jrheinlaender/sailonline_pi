@@ -70,6 +70,7 @@
 #include <wx/window.h>
 
 #include "ocpn_plugin.h"
+#include <json/json.h>
 
 class SailonlineUi;
 class Sailonline;
@@ -78,8 +79,8 @@ class Sailonline;
 //    The PlugIn Class Definition
 //----------------------------------------------------------------------------------------------------------
 
-#define SAILONLINE_TOOL_POSITION \
-  -1  // Request default positioning of toolbar tool
+// Request default positioning of toolbar tool
+#define SAILONLINE_TOOL_POSITION -1
 
 class sailonline_pi : public opencpn_plugin_121 {
 public:

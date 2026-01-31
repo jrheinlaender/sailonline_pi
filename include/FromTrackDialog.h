@@ -28,19 +28,17 @@
 class SailonlineUi;
 
 /**
- * Class that handles the main DC from track  functionality.
+ * Class that handles the main DC from track functionality.
  */
 class FromTrackDialog : public FromTrackDialogBase {
 public:
-  FromTrackDialog(Sailonline* psailonline);
+  FromTrackDialog(SailonlineUi* psailonline);
 
   void OnFromTrackDone(wxCommandEvent& event);
 
   wxString GetSelectedTrack() const { return m_selected_track; }
 
 private:
-  Sailonline* m_psailonline;
-
   wxArrayString m_track_guids;
   wxString m_selected_track;
 };

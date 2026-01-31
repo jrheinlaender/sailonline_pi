@@ -22,10 +22,10 @@
 #include <ocpn_plugin.h>
 
 #include "FromTrackDialog.h"
-#include "Sailonline.h"
+#include "SailonlineUi.h"
 
-FromTrackDialog::FromTrackDialog(Sailonline* psailonline)
-    : FromTrackDialogBase(psailonline), m_psailonline(std::move(psailonline)) {
+FromTrackDialog::FromTrackDialog(SailonlineUi* pui)
+    : FromTrackDialogBase(pui) {
   m_track_guids = GetTrackGUIDArray();
   m_ptracklist->SetColumns(1);
 

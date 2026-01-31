@@ -28,6 +28,12 @@
  */
 namespace SolApi {
     const static std::string kUrlRacelist = "http://www.sailonline.org/webclient/races.xml?filter=active";
+    const static std::string kSolUrl = "https://sailonline.org/community/accounts/login/";
+    const static std::string kSolReferer = "https://sailonline.org/community/accounts/login/"
+                    "?password=$$password&username=$$username";
+    const static std::string kSolPost = "next=%2Fwindy%2Frun%2F$$racenumber%2F"
+                    "&password=$$password&username=$$username&csrfmiddlewaretoken=";
+    const static std::string kSolRaceXmlUrl = "https://www.sailonline.org/webclient/auth_raceinfo_$$racenumber.xml?token=$$token";
 };
 
 #endif

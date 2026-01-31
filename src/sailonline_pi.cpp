@@ -51,7 +51,7 @@ extern "C" DECL_EXP void destroy_pi(opencpn_plugin* p) { delete p; }
 //
 //---------------------------------------------------------------------------------------------------------
 
-sailonline_pi::sailonline_pi(void* ppimgr) : opencpn_plugin_120(ppimgr) {
+sailonline_pi::sailonline_pi(void* ppimgr) : opencpn_plugin_121(ppimgr) {
   // Get filenames of the plugIn icons
   // TODO All these icons are 32x32, is that correct?
   wxFileName icon_filename;

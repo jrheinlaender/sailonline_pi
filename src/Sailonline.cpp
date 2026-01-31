@@ -21,13 +21,15 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include <ocpn_plugin.h>
 #include <pugixml.hpp>
 
 #include "sailonline_pi.h"
 #include "Sailonline.h"
+#include "Race.h"
 #include "SolApi.h"
-#include "FromTrackDialog.h"
+
+Sailonline::Sailonline(sailonline_pi& plugin) : m_sailonline_pi(plugin) {
+  wxLogMessage("Initializing Sailonline");
 
   // Check if we are online
   if (!OCPN_isOnline()) {
@@ -148,6 +150,31 @@ void Sailonline::OnRaceSelected(wxListEvent& event) {
 
     pagedata.clear();
     result = curl_easy_perform(curl);
+    // Available information
+    // tag <url>:
+    // https://www.sailonline.org/webclient/race_1967.xml?token=<TOKEN>
+    //    zlib-compressed xml file containing data about every boat in the race
+    //    From bash do printf "\x1f\x8b\x08\x00\x00\x00\x00\x00" |cat -
+    //    race_1967.xml |gzip -dc|more
+    // tag <weatherurl>:
+    // https://www.sailonline.org/webclient/weatherinfo_122.xml?token=<TOKEN>
+    //    Text file
+    //       122 2025/12/21 16:24:15
+    //
+http://sailonline.org/site_media/weather/xml/weather_122_global_gfs_20251221_1624.xml
+    //    From this link the weather data can be downloaded (without token)
+    // tag <traceUrl>:
+    // https://www.sailonline.org/webclient/traces_1967.xml?token=<TOKEN>
+    //    zlib-compressed xml file containing tracks of all boats?
+    // tag <boaturl>:
+    //    Text file
+    //       3092 449865 Ibis 2025/12/01 11:00:00 1764586800UTCC 2025/12/15
+    //       18:52:07 1765824727UTCC 0.0 3.53605193784 3.32537832275 0.0
+    //       0.966386722578 0.0 0.0 105.5979118 -10.3839613937 3.53605193784 54
+    //       0 twa
+
+    // Polar <boat><vpp><tws_splined> integer 0:max, <twa_splined> integer
+    // 0:180, <bs_splined> float
 
     curl_easy_cleanup(curl);
 
