@@ -122,37 +122,10 @@ Sailonline::~Sailonline() {
 
 }
 
-std::string curl_extract_cookie(CURL* curl, const std::string& name) {
-  struct curl_slist* cookies = nullptr;
-  CURLcode result = curl_easy_getinfo(curl, CURLINFO_COOKIELIST, &cookies);
-  std::string cookie("");
-
-  if (result == CURLE_OK && cookies != nullptr) {
-    struct curl_slist* each = cookies;
-    while (each) {
-      std::string c(each->data);
-      size_t pos = c.find(name);
-
-      if (pos != std::string::npos) {
-        cookie = c.substr(pos + name.size() + 1);
-        break;
-      }
-
-      each = each->next;
-    }
-    curl_slist_free_all(cookies);
-  }
 
   return cookie;
 }
 
-static size_t curl_write_cb(void* contents, size_t size, size_t nmemb,
-                            void* userp) {
-  wxLogMessage("Receiving %u bytes of data", size * nmemb);
-  size_t realsize = size * nmemb;
-  std::string* data = static_cast<std::string*>(userp);
-  data->append(static_cast<const char*>(contents), realsize);
-  return realsize;
 }
 
 void Sailonline::OnRaceSelected(wxListEvent& event) {
@@ -237,30 +210,6 @@ void Sailonline::OnRaceSelected(wxListEvent& event) {
     polar_file.Close();
   }
 
-}
-
-void Sailonline::OnDcDownload(wxCommandEvent& event) {}
-void Sailonline::OnDcUpload(wxCommandEvent& event) {}
-
-void Sailonline::OnCopyDcs(wxCommandEvent& event) {
-  wxString dc_list;
-
-  for (const auto& dc : m_prace->m_dcs) {
-    wxString timestamp = dc.m_timestamp.Format("%Y/%m/%d %H:%M:%S");
-    wxString coursetype = (dc.m_is_twa ? "twa" : "cc");
-    wxString course =
-        wxString::Format("%03.3f", dc.m_is_twa ? dc.m_twa : dc.m_course);
-
-    wxString line;
-    line.Printf("%s %s %s %c", timestamp, coursetype, course, '\n');
-    dc_list.Append(std::move(line));
-  }
-
-  if (wxTheClipboard->Open()) {
-    wxTheClipboard->SetData(
-        new wxTextDataObject(dc_list));  // Don't delete, clipboard holds data
-    wxTheClipboard->Close();
-  }
 }
 
 void Sailonline::CleanupDownload() {
