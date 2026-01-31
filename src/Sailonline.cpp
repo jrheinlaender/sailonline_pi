@@ -19,6 +19,7 @@
 
 #include <wx/wx.h>
 
+#include <boost/algorithm/string.hpp>
 
 #include <ocpn_plugin.h>
 #include <pugixml.hpp>
@@ -91,19 +92,23 @@
       for (pugi::xml_node node_race_child = node_race.first_child();
            node_race_child; node_race_child = node_race_child.next_sibling()) {
         if (strcmp(node_race_child.name(), "id") == 0) {
-          race.m_id = wxString(node_race_child.first_child().value()).Trim();
+          race.m_id = node_race_child.first_child().value();
+          boost::trim(race.m_id);
         } else if (strcmp(node_race_child.name(), "name") == 0) {
-          race.m_name = wxString(node_race_child.first_child().value()).Trim();
+          race.m_name = node_race_child.first_child().value();
+          boost::trim(race.m_name);
         } else if (strcmp(node_race_child.name(), "description") == 0) {
-          race.m_description =
-              wxString(node_race_child.first_child().value()).Trim();
+          race.m_description = node_race_child.first_child().value();
+          boost::trim(race.m_description);
         } else if (strcmp(node_race_child.name(), "message") == 0) {
-          race.m_message =
-              wxString(node_race_child.first_child().value()).Trim();
+          race.m_message = node_race_child.first_child().value();
+          boost::trim(race.m_message);
         } else if (strcmp(node_race_child.name(), "start_time") == 0) {
-          race.m_start = wxString(node_race_child.first_child().value()).Trim();
+          race.m_start = node_race_child.first_child().value();
+          boost::trim(race.m_start);
         } else if (strcmp(node_race_child.name(), "url") == 0) {
-          race.m_url = wxString(node_race_child.first_child().value()).Trim();
+          race.m_url = node_race_child.first_child().value();
+          boost::trim(race.m_url);
         }
       }
 
