@@ -17,32 +17,59 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,  USA.         *
  ***************************************************************************/
 
-#ifndef _FROMROUTEDIALOG_H
-#define _FROMROUTEDIALOG_H
+#ifndef _SAILONLINEUI_H_
+#define _SAILONLINEUI_H_
 
-#include <wx/event.h>
-#include <wx/string.h>
+#include <memory>
 
 #include "SailonlineUiBase.h"
 
-class SailonlineUi;
+class sailonline_pi;
+class Sailonline;
+class Race;
 
 /**
- * Class that handles the main DC from track  functionality.
+ * Class that handles the Sailonline user interface.
  */
-class FromTrackDialog : public FromTrackDialogBase {
+class SailonlineUi : public SailonlineUiBase {
 public:
-  FromTrackDialog(Sailonline* psailonline);
+  SailonlineUi(wxWindow* parent, sailonline_pi& plugin);
+  ~SailonlineUi();
 
-  void OnFromTrackDone(wxCommandEvent& event);
-
-  wxString GetSelectedTrack() const { return m_selected_track; }
+  bool Show(bool show);
 
 private:
-  Sailonline* m_psailonline;
+  sailonline_pi& m_sailonline_pi;
 
-  wxArrayString m_track_guids;
-  wxString m_selected_track;
+  SailonlinePanel* m_ppanel;
+
+  // Current race visible in UI
+  std::unique_ptr<Race> m_prace;
+
+  std::vector<std::string> m_init_errors;
+
+  // Show data on selected notebook page
+  void ShowPage(const int page);
+
+  // Events
+  // Don't destroy, otherwise sailonline_pi::DeInit() will crash
+  void OnClose(wxCloseEvent& event) { Hide(); }
+  void OnClose(wxCommandEvent& event) { Hide(); }
+  void OnRaceSelected(wxListEvent& event);
+  void OnPageChanged(wxBookCtrlEvent& event);
+  void OnPolarDownload(wxCommandEvent& event);
+  void OnDcDownload(wxCommandEvent& event);
+  void OnDcUpload(wxCommandEvent& event);
+  void OnDcFromTrack(wxCommandEvent& event);
+  void OnDcToTrack(wxCommandEvent& event);
+  void OnDcModify(wxCommandEvent& event);
+  void OnCopyDcs(wxCommandEvent& event);
+
+  /// Update dc panel with data from current race
+  void FillDcList();
+
+  // Shortcut to Sailonline data
+  const std::shared_ptr<Sailonline> GetSol() const;
 };
 
 #endif

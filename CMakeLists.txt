@@ -178,7 +178,8 @@ add_definitions(-DUSE_S57)
 set(SRCS
     src/sailonline_pi.cpp
     src/Sailonline.cpp
-    src/SailonlineUI.cpp
+    src/SailonlineUi.cpp
+    src/SailonlineUiBase.cpp
     src/FromTrackDialog.cpp
 )
 
@@ -186,7 +187,8 @@ set(HDRS
     include/sailonline_pi.h
     include/SolApi.h
     include/Sailonline.h
-    include/SailonlineUI.h
+    include/SailonlineUi.h
+    include/SailonlineUiBase.h
     include/FromTrackDialog.h
 )
 

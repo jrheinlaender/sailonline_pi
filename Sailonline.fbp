@@ -13,7 +13,7 @@
     <property name="cpp_use_enum">0</property>
     <property name="embedded_files_path">res</property>
     <property name="encoding">UTF-8</property>
-    <property name="file">SailonlineUI</property>
+    <property name="file">SailonlineUiBase</property>
     <property name="first_id">1000</property>
     <property name="internationalize">1</property>
     <property name="lua_skip_events">1</property>
@@ -48,7 +48,7 @@
       <property name="id">wxID_ANY</property>
       <property name="maximum_size"></property>
       <property name="minimum_size">600,450</property>
-      <property name="name">SailonlineBase</property>
+      <property name="name">SailonlineUiBase</property>
       <property name="pos"></property>
       <property name="size">-1,-1</property>
       <property name="style">wxCAPTION|wxCLOSE_BOX|wxFRAME_FLOAT_ON_PARENT|wxFRAME_NO_TASKBAR|wxRESIZE_BORDER|wxSYSTEM_MENU</property>

@@ -26,7 +26,6 @@
 #include "ocpn_plugin.h"
 #include <json/json.h>
 
-#include "SailonlineUI.h"
 
 class sailonline_pi;
 class FromTrackDialog;
