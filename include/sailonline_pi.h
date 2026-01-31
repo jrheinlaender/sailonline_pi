@@ -80,7 +80,7 @@
 #define SAILONLINE_TOOL_POSITION \
   -1  // Request default positioning of toolbar tool
 
-class sailonline_pi : public opencpn_plugin_120 {
+class sailonline_pi : public opencpn_plugin_121 {
 public:
   sailonline_pi(void* ppimgr);
   ~sailonline_pi();
