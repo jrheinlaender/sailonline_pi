@@ -40,7 +40,6 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
       m_ppanel(nullptr),
       m_prace(nullptr) {
   wxLogMessage("Initializing Sailonline GUI");
-  std::cout << "SOL: GUI Init()" << std::endl;
 
   // Image handlers required by controls
   wxImage::AddHandler(

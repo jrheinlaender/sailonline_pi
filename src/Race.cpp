@@ -252,21 +252,38 @@ bool Race::Login() {
   return true;
 }
 
-bool Race::DownloadPolar() {
-  wxLogMessage("Downloading polar data for race %s", m_id);
-  CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
-  if (result != CURLE_OK) {
-    m_errors.emplace_back("Curl error: " + std::to_string(result));
-    return false;
+wxString Race::GetRaceInfo() {
+    wxString result;
+
+  if (m_sol_token.empty()) {
+    m_errors.emplace_back("Not logged into race " + m_id + ", did you register?");
+    return result;
+  }
+
+  // Check if raceinfo was already downloaded
+  wxFileName raceinfo = m_sailonline_pi.GetDataDir(wxString::Format("Race_%s", m_id.c_str()));
+  raceinfo.SetFullName(wxString::Format("auth_raceinfo_%s.xml", m_id.c_str()));
+  if (raceinfo.Exists()) {
+      wxLogMessage("Reading cached auth_raceinfo_%s.xml", m_id);
+      wxFile raceinfo_file(raceinfo.GetFullPath(), wxFile::read);
+      raceinfo_file.ReadAll(&result);
+      raceinfo_file.Close();
+      return result;
+  }
+
+    wxLogMessage("Downloading auth_raceinfo_%s.xml", m_id);
+  CURLcode cresult = curl_global_init(CURL_GLOBAL_ALL);
+  if (cresult != CURLE_OK) {
+    m_errors.emplace_back("Curl error: " + std::to_string(cresult));
+    return result;
   }
 
   CURL* curl = curl_easy_init();
   if (curl == nullptr) {
     m_errors.emplace_back("Curl error: curl_easy_init() failed");
-    return false;
+    return result;
   }
 
-  // Download detailed race data (XML format)
   std::string race_url = SetPlaceholders(SolApi::kSolRaceXmlUrl);
   curl_easy_setopt(curl, CURLOPT_URL, race_url.c_str());
   curl_easy_setopt(curl, CURLOPT_HTTPGET,
@@ -278,13 +295,23 @@ bool Race::DownloadPolar() {
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&pagedata);
   if (!CallCurl(curl)) {
     m_errors.emplace_back("Curl error: GET of race XML failed");
-    return false;
+    return result;
   }
   if (pagedata == "Bad token") {
     m_errors.emplace_back("Race token is invalid. Try logging in again");
     // TODO but currently the UI doesn't offer any way of re-logging-in ...
-    return false;
+    return result;
   }
+
+  // Write race info to file for later use
+  wxFile raceinfo_file(raceinfo.GetFullPath(), wxFile::write);
+  if (raceinfo_file.Error()) {
+    m_errors.emplace_back("Could not write to auth_raceinfo_" + m_id + ".xml");
+    return result;
+  }
+  raceinfo_file.Write(pagedata);
+  raceinfo_file.Close();
+  wxLogMessage("Cached raceinfo to auth_raceinfo_%s.xml", m_id.c_str());
 
   // Available information
   // tag <url>:
@@ -313,8 +340,12 @@ bool Race::DownloadPolar() {
 
   curl_easy_cleanup(curl);
 
+  return result;
+}
+
+bool Race::DownloadPolar() {
   pugi::xml_document race_doc;
-  auto status = race_doc.load_string(pagedata.c_str());
+  auto status = race_doc.load_string(GetRaceInfo());
   if (!status) {
     m_errors.emplace_back("Could not parse race file: %s",
                           status.description());
@@ -734,10 +765,13 @@ void Race::EnrichDcs() {
 void Race::MakeTrack() const {
   if (m_dcs.empty()) return;
 
-  std::unique_ptr<PlugIn_Track> ptrack = std::make_unique<PlugIn_Track>();
-  ptrack->m_NameString = "SOL";
-  ptrack->m_StartString = "Start";
-  ptrack->m_EndString = "End";
+  PlugIn_Track track;
+  // TODO Put timestamp of the route calculation here
+  struct tm* timeinfo(gmtime(nullptr)); // Current UTC timestamp
+  track.m_NameString = "SOL " + m_id + std::asctime(timeinfo);
+  track.m_StartString = "Start";
+  track.m_EndString = "End";
+  track.m_GUID = GetNewGUID();
 
   double current_lat = m_dcs.front().m_lat_start;
   double current_lon = m_dcs.front().m_lon_start;
@@ -747,11 +781,12 @@ void Race::MakeTrack() const {
 
   // Recalculate the track from the dcs as precisely as possible
   for (auto dc = m_dcs.begin(); dc != m_dcs.end(); ++dc) {
-    std::unique_ptr<PlugIn_Waypoint> pwaypoint =
-        std::make_unique<PlugIn_Waypoint>(current_lat, current_lon,
-                                          wxEmptyString, wxEmptyString,
+    // Note that pWaypointList stores pointers only, and does not manage their memory
+    PlugIn_Waypoint* pwaypoint = new PlugIn_Waypoint(current_lat, current_lon,
+                                          "dot", _("SOL route point"),
                                           wxEmptyString);
-    ptrack->pWaypointList->Append(pwaypoint.get());
+    pwaypoint->m_CreateTime = dc->m_timestamp;
+    track.pWaypointList->Append(pwaypoint);
 
     auto [tws, twd] = GetWindData(dc->m_timestamp, current_lat, current_lon);
     double twa = twd - dc->m_course;  // positive sign: starboard tack
