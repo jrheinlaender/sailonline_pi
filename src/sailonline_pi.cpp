@@ -54,9 +54,7 @@ extern "C" DECL_EXP void destroy_pi(opencpn_plugin* p) { delete p; }
 sailonline_pi::sailonline_pi(void* ppimgr) : opencpn_plugin_121(ppimgr) {
   // Get filenames of the plugIn icons
   // TODO All these icons are 32x32, is that correct?
-  wxFileName icon_filename;
-  icon_filename.SetPath(GetPluginDataDir("sailonline_pi"));
-  icon_filename.AppendDir("data");
+  wxFileName icon_filename(GetDataDir());
   wxLogDebug(wxString("Using icon path: %s", icon_filename.GetFullPath()));
 
   wxImage::AddHandler(new wxPNGHandler);
@@ -207,6 +205,21 @@ void sailonline_pi::OnToolbarToolCallback(int id) {
   if (!m_psailonline) NewSol();
 
   m_pui->Show(!m_pui->IsShown());
+}
+
+wxFileName sailonline_pi::GetDataDir(const wxString& subdir) const {
+    wxFileName result;
+    result.SetPath(GetPluginDataDir("sailonline_pi"));
+    result.AppendDir("data");
+    if (!result.DirExists())
+        result.Mkdir();
+    if (!subdir.IsEmpty()) {
+        result.AppendDir(subdir);
+        if (!result.DirExists())
+        result.Mkdir();
+    }
+
+  return result;
 }
 
 Json::Value sailonline_pi::GetJsonMessage() const {

@@ -337,18 +337,10 @@ bool Race::DownloadPolar() {
   // Write polar to .csv file for import into weather routing plugin
   std::string polar_name(node_name.first_child().value());
   std::replace(polar_name.begin(), polar_name.end(), ' ', '_');
-  wxString download_target = GetPluginDataDir("sailonline_pi")
-                                 .Append(wxFileName::GetPathSeparator())
-                                 .Append("data")
-                                 .Append(wxFileName::GetPathSeparator())
-                                 .Append("Polar");
-  if (!wxDirExists(download_target)) wxMkdir(download_target);
-  download_target.Append(wxFileName::GetPathSeparator())
-      .Append("SOL_")
-      .Append(polar_name.c_str())
-      .Append("_polar.csv");
-  wxLogMessage("Writing boat polar to %s", download_target);
-  wxFile polar_file(download_target, wxFile::write);
+  wxFileName download_target = m_sailonline_pi.GetDataDir("Polar");
+  download_target.SetFullName(wxString::Format("SOL_%s_polar.csv", polar_name.c_str()));
+  wxLogMessage("Writing boat polar to %s", download_target.GetFullPath());
+  wxFile polar_file(download_target.GetFullPath(), wxFile::write);
   if (polar_file.Error()) {
     m_errors.emplace_back("Could not write to polar file");
     return false;
@@ -389,8 +381,8 @@ bool Race::DownloadPolar() {
   }
 
   polar_file.Close();
-  m_polarfile = download_target.ToStdString();
-  wxLogMessage("Saved polar data to %s", m_polarfile);
+  m_polarfile = download_target.GetFullName();
+  wxLogMessage("Saved polar data to %s", download_target.GetFullPath());
   return true;
 }
 

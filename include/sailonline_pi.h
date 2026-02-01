@@ -112,6 +112,10 @@ public:
 
   wxFileConfig* GetConf() { return m_pconfig; }
 
+  /// Return path of directory where all SOL-related data is stored.
+  // Optionally append and create a subdirectory
+  wxFileName GetDataDir(const wxString& subdir = "") const;
+
   Json::Value GetJsonMessage() const;
 
 private:

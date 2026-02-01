@@ -39,12 +39,9 @@ Sailonline::Sailonline(sailonline_pi& plugin) : m_sailonline_pi(plugin) {
 
   // Fill racelist
   // Build target filename
-  wxString download_target = GetPluginDataDir("sailonline_pi")
-                                 .Append(wxFileName::GetPathSeparator())
-                                 .Append("data");
-  if (!wxDirExists(download_target)) wxMkdir(download_target);
-  download_target.Append(wxFileName::GetPathSeparator()).Append("racelist.xml");
-  wxLogMessage("Downloading racelist to %s", download_target);
+  wxFileName download_target = m_sailonline_pi.GetDataDir();
+  download_target.SetFullName("racelist.xml");
+  wxLogMessage("Downloading racelist to %s", download_target.GetFullPath());
 
   // Download racelist
   Connect(wxEVT_DOWNLOAD_EVENT,
@@ -54,7 +51,7 @@ Sailonline::Sailonline(sailonline_pi& plugin) : m_sailonline_pi(plugin) {
   m_downloading = true;
   m_download_success = true;
   m_download_handle = 0;
-  if (!(OCPN_downloadFileBackground(SolApi::kUrlRacelist, download_target, this,
+  if (!(OCPN_downloadFileBackground(SolApi::kUrlRacelist, download_target.GetFullPath(), this,
                                     &m_download_handle) == OCPN_DL_STARTED)) {
     m_errors.emplace_back("Failed to initiate download of racelist " +
                           SolApi::kUrlRacelist);
@@ -75,7 +72,7 @@ Sailonline::Sailonline(sailonline_pi& plugin) : m_sailonline_pi(plugin) {
 
   // Load racelist into xml parser
   pugi::xml_document racelist_doc;
-  auto status = racelist_doc.load_file(download_target.mb_str());
+  auto status = racelist_doc.load_file(download_target.GetFullPath().mb_str());
   if (!status) {
     wxLogError("Could not parse racelist file: %s", status.description());
     return;
