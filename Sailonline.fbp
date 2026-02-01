@@ -1419,11 +1419,11 @@
                           </object>
                         </object>
                       </object>
-                      <object class="notebookpage" expanded="false">
+                      <object class="notebookpage" expanded="true">
                         <property name="bitmap"></property>
                         <property name="label">Info</property>
                         <property name="select">0</property>
-                        <object class="wxPanel" expanded="false">
+                        <object class="wxPanel" expanded="true">
                           <property name="BottomDockable">1</property>
                           <property name="LeftDockable">1</property>
                           <property name="RightDockable">1</property>
@@ -1560,7 +1560,7 @@
                                 </object>
                                 <object class="sizeritem" expanded="true">
                                   <property name="border">5</property>
-                                  <property name="flag">wxALL</property>
+                                  <property name="flag">wxALL|wxEXPAND</property>
                                   <property name="proportion">0</property>
                                   <object class="wxStaticText" expanded="true">
                                     <property name="BottomDockable">1</property>

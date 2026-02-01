@@ -33,6 +33,11 @@
 
 Race::Race(sailonline_pi& plugin) : m_sailonline_pi(plugin) {}
 
+Race::~Race() {
+    for (auto wp : m_waypoints)
+        delete wp;
+}
+
 namespace {
 // TODO duplicate code with WR plugin
 

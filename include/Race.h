@@ -26,7 +26,10 @@
 #include <wx/datetime.h>
 
 typedef void CURL;
+namespace pugi { class xml_document; }
+class PlugIn_Waypoint;
 class sailonline_pi;
+
 
 /**
  * Class that handles SOL delayed commands
@@ -53,6 +56,7 @@ public:
 class Race {
 public:
   Race(sailonline_pi& plugin);
+  ~Race();
 
   std::string m_id;
   std::string m_name;
@@ -93,6 +97,11 @@ private:
 
   // This must be list because of element insertion in OnDcModify()
   std::list<Dc> m_dcs;
+
+  std::vector<PlugIn_Waypoint*> m_waypoints;
+
+  /// Download detailed raceinfo XML
+  wxString GetRaceInfo();
 
   // Messaging
   // Request grib values: True wind speed (knots) and true wind direction
