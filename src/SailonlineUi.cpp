@@ -104,6 +104,9 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
                                         wxLIST_STATE_SELECTED,
                                         wxLIST_STATE_SELECTED);
 
+  m_ppanel->m_notebook->Connect(
+      wxEVT_NOTEBOOK_PAGE_CHANGING,
+      wxBookCtrlEventHandler(SailonlineUi::OnPageChanged), nullptr, this);
   m_ppanel->m_notebook->SetSelection(0);  // Show first tab
 
   m_ppanel->m_pdclist->ClearAll();
@@ -203,6 +206,8 @@ void SailonlineUi::ShowPage(const int page) {
       m_ppanel->m_racemsg->SetLabel(m_prace->m_message);
       m_ppanel->m_racedesc->SetPage(m_prace->m_description);
       m_ppanel->m_racedesc->SetSize(m_ppanel->m_racedata->GetClientSize());
+
+      break;
     }
     case 1:  // Race information
     {
@@ -216,12 +221,16 @@ void SailonlineUi::ShowPage(const int page) {
       }
 
       m_ppanel->m_polarname->SetLabel(m_prace->m_polarfile);
+
+      break;
     }
     case 2:  // DC list
     {
       // m_prace->Login();
       // m_prace->DownloadDcs();
       FillDcList();
+
+      break;
     }
   }
 }
