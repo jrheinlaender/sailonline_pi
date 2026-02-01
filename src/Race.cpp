@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <sstream>
+#include <ctime>
 
 #include <wx/wx.h>
 
@@ -789,7 +790,15 @@ void Race::MakeTrack() const {
     track.pWaypointList->Append(pwaypoint);
 
     auto [tws, twd] = GetWindData(dc->m_timestamp, current_lat, current_lon);
-    double twa = twd - dc->m_course;  // positive sign: starboard tack
+    double twa;
+    double course;
+    if (dc->m_is_twa) {
+        twa = dc->m_twa;
+        course = twd - twa;
+    } else {
+        twa = twd - dc->m_course; // positive sign: starboard tack
+        course = dc->m_course;
+    }
     if (twa < -180.0)
       twa += 360.0;
     else if (twa > 180.0)
@@ -807,9 +816,11 @@ void Race::MakeTrack() const {
             ? (next_dc->m_timestamp - dc->m_timestamp).GetSeconds().ToDouble()
             : 3600.0;  // Go on for one more hour after last Dc
 
+    // Note: Waypoints are only created at DC timestamps, not at every jump
     double jump = std::min(time_seconds, 30.0);
     double current_time;
     double current_stw = theoretical_stw * performance;
+    double total_dist = 0.0;
 
     for (current_time = jump; current_time <= time_seconds;
          current_time += jump) {
@@ -824,10 +835,11 @@ void Race::MakeTrack() const {
       // TODO It is not clear whether dist is calculated with old or new
       // performance
       double dist = current_stw * jump / 3600.0;
-      double next_lat;
-      double next_lon;
-      PositionBearingDistanceMercator_Plugin(
-          current_lat, current_lon, dc->m_course, dist, &next_lat, &next_lon);
+      if (dc->m_is_twa)
+        PositionBearingDistanceMercator_Plugin(
+            current_lat, current_lon, course, dist, &current_lat, &current_lon);
+
+      total_dist += dist;
     }
 
     // Remaining fractional jump
@@ -836,8 +848,20 @@ void Race::MakeTrack() const {
       performance =
           std::min(1.0, get_recovery_step(performance, remainder, current_stw));
       double dist = theoretical_stw * performance * remainder / 3600.0;
+      if (dc->m_is_twa)
+        PositionBearingDistanceMercator_Plugin(
+            current_lat, current_lon, course, dist, &current_lat, &current_lon);
+
+      total_dist += dist;
     }
+
+    if (!dc->m_is_twa)
+        PositionBearingDistanceMercator_Plugin(
+            current_lat, current_lon, dc->m_course, total_dist, &current_lat, &current_lon);
   }
 
-  AddPlugInTrack(ptrack.get());  // Note: Contents are copied
+  AddPlugInTrack(&track);  // Note: Contents are copied
+  // The destructor does not do this
+  track.pWaypointList->DeleteContents(true);
+  track.pWaypointList->Clear();
 }
