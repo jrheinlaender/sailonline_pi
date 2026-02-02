@@ -22,6 +22,7 @@
 
 #include <list>
 #include <string>
+#include <memory>
 
 #include <wx/datetime.h>
 
@@ -75,6 +76,9 @@ public:
   /// Download race XML and extract polar
   bool DownloadPolar();
 
+  /// Extract waypoints from race XML
+  bool GetWaypoints();
+
   const std::list<Dc>& GetDcs() const;
   std::list<Dc>& GetDcs();
 
@@ -98,7 +102,7 @@ private:
   // This must be list because of element insertion in OnDcModify()
   std::list<Dc> m_dcs;
 
-  std::vector<PlugIn_Waypoint*> m_waypoints;
+  std::vector<std::shared_ptr<PlugIn_Waypoint>> m_waypoints;
 
   /// Download detailed raceinfo XML
   wxString GetRaceInfo();

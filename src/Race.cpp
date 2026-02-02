@@ -34,8 +34,6 @@
 Race::Race(sailonline_pi& plugin) : m_sailonline_pi(plugin) {}
 
 Race::~Race() {
-    for (auto wp : m_waypoints)
-        delete wp;
 }
 
 namespace {
@@ -420,6 +418,53 @@ bool Race::DownloadPolar() {
   polar_file.Close();
   m_polarfile = download_target.GetFullName();
   wxLogMessage("Saved polar data to %s", download_target.GetFullPath());
+  return true;
+}
+
+bool Race::GetWaypoints() {
+  pugi::xml_document race_doc;
+  auto status = race_doc.load_string(GetRaceInfo());
+  if (!status) {
+    m_errors.emplace_back("Could not parse race file: %s",
+                          status.description());
+    return false;
+  }
+
+  // Get waypoints
+  m_waypoints.clear();
+
+  pugi::xml_node node_course = race_doc.select_node("/race/course").node();
+    for (pugi::xml_node node_wp = node_course.first_child(); node_wp != nullptr;
+       node_wp = node_wp.next_sibling()) {
+        if (strcmp(node_wp.name(), "waypoint") == 0) {
+          std::shared_ptr<PlugIn_Waypoint> wp = std::make_shared<PlugIn_Waypoint>();
+
+          for (pugi::xml_node node_wp_child = node_wp.first_child();
+            node_wp_child != nullptr; node_wp_child = node_wp_child.next_sibling()) {
+            if (strcmp(node_wp_child.name(), "order") == 0)
+                wp->m_GUID = wxString::Format("SOL_%s_%s", m_id, node_wp_child.first_child().value());
+            else if (strcmp(node_wp_child.name(), "name") == 0)
+                wp->m_MarkName = node_wp_child.first_child().value();
+            else if (strcmp(node_wp_child.name(), "lon") == 0) {
+                double lon;
+                if (wxString(node_wp_child.first_child().value()).ToDouble(&lon))
+                    wp->m_lon = lon;
+            } else if (strcmp(node_wp_child.name(), "lat") == 0) {
+                double lat;
+                if (wxString(node_wp_child.first_child().value()).ToDouble(&lat))
+                    wp->m_lat = lat;
+            }
+            // TODO What about node <any_side> ?
+
+            m_waypoints.emplace_back(wp);
+
+            // Add permanent waypoint to main application. Note: data is copied
+            if (!UpdateSingleWaypoint(wp.get()))
+                AddSingleWaypoint(wp.get(), true);
+          }
+        }
+  }
+
   return true;
 }
 
