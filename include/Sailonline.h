@@ -38,7 +38,9 @@ public:
   /// Return error messages and clear the error store
   std::vector<std::string> GetErrors();
 
-  const std::unordered_map<std::string, Race>& GetRaces() const { return m_races; }
+  const std::unordered_map<std::string, Race>& GetRaces() const {
+    return m_races;
+  }
   std::unique_ptr<Race> GetRace(const std::string& racenumber) const;
 
 private:

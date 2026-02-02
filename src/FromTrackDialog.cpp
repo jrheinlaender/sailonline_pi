@@ -24,8 +24,7 @@
 #include "FromTrackDialog.h"
 #include "SailonlineUi.h"
 
-FromTrackDialog::FromTrackDialog(SailonlineUi* pui)
-    : FromTrackDialogBase(pui) {
+FromTrackDialog::FromTrackDialog(SailonlineUi* pui) : FromTrackDialogBase(pui) {
   m_track_guids = GetTrackGUIDArray();
   m_ptracklist->SetColumns(1);
 
@@ -41,8 +40,8 @@ FromTrackDialog::FromTrackDialog(SailonlineUi* pui)
 }
 
 void FromTrackDialog::OnFromTrackDone(wxCommandEvent& event) {
-    if (m_ptracklist->GetSelection() != wxNOT_FOUND)
-        m_selected_track = m_track_guids[m_ptracklist->GetSelection()];
+  if (m_ptracklist->GetSelection() != wxNOT_FOUND)
+    m_selected_track = m_track_guids[m_ptracklist->GetSelection()];
 
   Hide();
   SetReturnCode(wxID_OK);

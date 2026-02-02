@@ -208,16 +208,14 @@ void sailonline_pi::OnToolbarToolCallback(int id) {
 }
 
 wxFileName sailonline_pi::GetDataDir(const wxString& subdir) const {
-    wxFileName result;
-    result.SetPath(GetPluginDataDir("sailonline_pi"));
-    result.AppendDir("data");
-    if (!result.DirExists())
-        result.Mkdir();
-    if (!subdir.IsEmpty()) {
-        result.AppendDir(subdir);
-        if (!result.DirExists())
-        result.Mkdir();
-    }
+  wxFileName result;
+  result.SetPath(GetPluginDataDir("sailonline_pi"));
+  result.AppendDir("data");
+  if (!result.DirExists()) result.Mkdir();
+  if (!subdir.IsEmpty()) {
+    result.AppendDir(subdir);
+    if (!result.DirExists()) result.Mkdir();
+  }
 
   return result;
 }

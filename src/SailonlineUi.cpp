@@ -210,14 +210,14 @@ void SailonlineUi::ShowPage(const int page) {
     }
     case 1:  // Race information
     {
-      if (!m_prace->Login() ||
-          !m_prace->DownloadPolar() ||
+      if (!m_prace->Login() || !m_prace->DownloadPolar() ||
           !m_prace->GetWaypoints()) {
         wxString errors;
         for (const auto& e : m_prace->GetErrors())
-            errors = errors.append(e).append('\n');
+          errors = errors.append(e).append('\n');
         wxLogMessage(errors);
-        OCPNMessageBox_PlugIn(this, errors, "Error downloading race information", wxOK);
+        OCPNMessageBox_PlugIn(this, errors,
+                              "Error downloading race information", wxOK);
         return;
       }
 

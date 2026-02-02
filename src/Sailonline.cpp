@@ -51,7 +51,8 @@ Sailonline::Sailonline(sailonline_pi& plugin) : m_sailonline_pi(plugin) {
   m_downloading = true;
   m_download_success = true;
   m_download_handle = 0;
-  if (!(OCPN_downloadFileBackground(SolApi::kUrlRacelist, download_target.GetFullPath(), this,
+  if (!(OCPN_downloadFileBackground(SolApi::kUrlRacelist,
+                                    download_target.GetFullPath(), this,
                                     &m_download_handle) == OCPN_DL_STARTED)) {
     m_errors.emplace_back("Failed to initiate download of racelist " +
                           SolApi::kUrlRacelist);
@@ -82,13 +83,14 @@ Sailonline::Sailonline(sailonline_pi& plugin) : m_sailonline_pi(plugin) {
   m_races.clear();
   pugi::xml_node node_races = racelist_doc.child("races");
 
-  for (pugi::xml_node node_race = node_races.first_child(); node_race;
-       node_race = node_race.next_sibling()) {
+  for (pugi::xml_node node_race = node_races.first_child();
+       node_race != nullptr; node_race = node_race.next_sibling()) {
     if (strcmp(node_race.name(), "race") == 0) {
       Race race(m_sailonline_pi);
 
       for (pugi::xml_node node_race_child = node_race.first_child();
-           node_race_child; node_race_child = node_race_child.next_sibling()) {
+           node_race_child != nullptr;
+           node_race_child = node_race_child.next_sibling()) {
         if (strcmp(node_race_child.name(), "id") == 0) {
           race.m_id = node_race_child.first_child().value();
           boost::trim(race.m_id);

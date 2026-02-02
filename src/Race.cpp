@@ -33,8 +33,7 @@
 
 Race::Race(sailonline_pi& plugin) : m_sailonline_pi(plugin) {}
 
-Race::~Race() {
-}
+Race::~Race() {}
 
 namespace {
 // TODO duplicate code with WR plugin
@@ -250,32 +249,35 @@ bool Race::Login() {
   }
 
   m_sol_token = pagedata.substr(pos + 31, 32);
-  wxLogMessage("Successfully logged in with token '%s' for race %s", m_sol_token, m_id);
+  wxLogMessage("Successfully logged in with token '%s' for race %s",
+               m_sol_token, m_id);
 
   curl_easy_cleanup(curl);
   return true;
 }
 
 wxString Race::GetRaceInfo() {
-    wxString result;
+  wxString result;
 
   if (m_sol_token.empty()) {
-    m_errors.emplace_back("Not logged into race " + m_id + ", did you register?");
+    m_errors.emplace_back("Not logged into race " + m_id +
+                          ", did you register?");
     return result;
   }
 
   // Check if raceinfo was already downloaded
-  wxFileName raceinfo = m_sailonline_pi.GetDataDir(wxString::Format("Race_%s", m_id.c_str()));
+  wxFileName raceinfo =
+      m_sailonline_pi.GetDataDir(wxString::Format("Race_%s", m_id.c_str()));
   raceinfo.SetFullName(wxString::Format("auth_raceinfo_%s.xml", m_id.c_str()));
   if (raceinfo.Exists()) {
-      wxLogMessage("Reading cached auth_raceinfo_%s.xml", m_id);
-      wxFile raceinfo_file(raceinfo.GetFullPath(), wxFile::read);
-      raceinfo_file.ReadAll(&result);
-      raceinfo_file.Close();
-      return result;
+    wxLogMessage("Reading cached auth_raceinfo_%s.xml", m_id);
+    wxFile raceinfo_file(raceinfo.GetFullPath(), wxFile::read);
+    raceinfo_file.ReadAll(&result);
+    raceinfo_file.Close();
+    return result;
   }
 
-    wxLogMessage("Downloading auth_raceinfo_%s.xml", m_id);
+  wxLogMessage("Downloading auth_raceinfo_%s.xml", m_id);
   CURLcode cresult = curl_global_init(CURL_GLOBAL_ALL);
   if (cresult != CURLE_OK) {
     m_errors.emplace_back("Curl error: " + std::to_string(cresult));
@@ -373,7 +375,8 @@ bool Race::DownloadPolar() {
   std::string polar_name(node_name.first_child().value());
   std::replace(polar_name.begin(), polar_name.end(), ' ', '_');
   wxFileName download_target = m_sailonline_pi.GetDataDir("Polar");
-  download_target.SetFullName(wxString::Format("SOL_%s_polar.csv", polar_name.c_str()));
+  download_target.SetFullName(
+      wxString::Format("SOL_%s_polar.csv", polar_name.c_str()));
   wxLogMessage("Writing boat polar to %s", download_target.GetFullPath());
   wxFile polar_file(download_target.GetFullPath(), wxFile::write);
   if (polar_file.Error()) {
@@ -434,35 +437,35 @@ bool Race::GetWaypoints() {
   m_waypoints.clear();
 
   pugi::xml_node node_course = race_doc.select_node("/race/course").node();
-    for (pugi::xml_node node_wp = node_course.first_child(); node_wp != nullptr;
+  for (pugi::xml_node node_wp = node_course.first_child(); node_wp != nullptr;
        node_wp = node_wp.next_sibling()) {
-        if (strcmp(node_wp.name(), "waypoint") == 0) {
-          std::shared_ptr<PlugIn_Waypoint> wp = std::make_shared<PlugIn_Waypoint>();
+    if (strcmp(node_wp.name(), "waypoint") == 0) {
+      std::shared_ptr<PlugIn_Waypoint> wp = std::make_shared<PlugIn_Waypoint>();
 
-          for (pugi::xml_node node_wp_child = node_wp.first_child();
-            node_wp_child != nullptr; node_wp_child = node_wp_child.next_sibling()) {
-            if (strcmp(node_wp_child.name(), "order") == 0)
-                wp->m_GUID = wxString::Format("SOL_%s_%s", m_id, node_wp_child.first_child().value());
-            else if (strcmp(node_wp_child.name(), "name") == 0)
-                wp->m_MarkName = node_wp_child.first_child().value();
-            else if (strcmp(node_wp_child.name(), "lon") == 0) {
-                double lon;
-                if (wxString(node_wp_child.first_child().value()).ToDouble(&lon))
-                    wp->m_lon = lon;
-            } else if (strcmp(node_wp_child.name(), "lat") == 0) {
-                double lat;
-                if (wxString(node_wp_child.first_child().value()).ToDouble(&lat))
-                    wp->m_lat = lat;
-            }
-            // TODO What about node <any_side> ?
-
-            m_waypoints.emplace_back(wp);
-
-            // Add permanent waypoint to main application. Note: data is copied
-            if (!UpdateSingleWaypoint(wp.get()))
-                AddSingleWaypoint(wp.get(), true);
-          }
+      for (pugi::xml_node node_wp_child = node_wp.first_child();
+           node_wp_child != nullptr;
+           node_wp_child = node_wp_child.next_sibling()) {
+        if (strcmp(node_wp_child.name(), "order") == 0)
+          wp->m_GUID = wxString::Format("SOL_%s_%s", m_id,
+                                        node_wp_child.first_child().value());
+        else if (strcmp(node_wp_child.name(), "name") == 0)
+          wp->m_MarkName = node_wp_child.first_child().value();
+        else if (strcmp(node_wp_child.name(), "lon") == 0) {
+          double lon;
+          if (wxString(node_wp_child.first_child().value()).ToDouble(&lon))
+            wp->m_lon = lon;
+        } else if (strcmp(node_wp_child.name(), "lat") == 0) {
+          double lat;
+          if (wxString(node_wp_child.first_child().value()).ToDouble(&lat))
+            wp->m_lat = lat;
         }
+
+        m_waypoints.emplace_back(wp);
+
+        // Add permanent waypoint to main application. Note: data is copied
+        if (!UpdateSingleWaypoint(wp.get())) AddSingleWaypoint(wp.get(), true);
+      }
+    }
   }
 
   return true;
@@ -818,7 +821,7 @@ void Race::MakeTrack() const {
 
   PlugIn_Track track;
   // TODO Put timestamp of the route calculation here
-  struct tm* timeinfo(gmtime(nullptr)); // Current UTC timestamp
+  struct tm* timeinfo(gmtime(nullptr));  // Current UTC timestamp
   track.m_NameString = "SOL " + m_id + std::asctime(timeinfo);
   track.m_StartString = "Start";
   track.m_EndString = "End";
@@ -832,10 +835,10 @@ void Race::MakeTrack() const {
 
   // Recalculate the track from the dcs as precisely as possible
   for (auto dc = m_dcs.begin(); dc != m_dcs.end(); ++dc) {
-    // Note that pWaypointList stores pointers only, and does not manage their memory
-    PlugIn_Waypoint* pwaypoint = new PlugIn_Waypoint(current_lat, current_lon,
-                                          "dot", _("SOL route point"),
-                                          wxEmptyString);
+    // Note that pWaypointList stores pointers only, and does not manage their
+    // memory
+    PlugIn_Waypoint* pwaypoint = new PlugIn_Waypoint(
+        current_lat, current_lon, "dot", _("SOL route point"), wxEmptyString);
     pwaypoint->m_CreateTime = dc->m_timestamp;
     track.pWaypointList->Append(pwaypoint);
 
@@ -843,11 +846,11 @@ void Race::MakeTrack() const {
     double twa;
     double course;
     if (dc->m_is_twa) {
-        twa = dc->m_twa;
-        course = twd - twa;
+      twa = dc->m_twa;
+      course = twd - twa;
     } else {
-        twa = twd - dc->m_course; // positive sign: starboard tack
-        course = dc->m_course;
+      twa = twd - dc->m_course;  // positive sign: starboard tack
+      course = dc->m_course;
     }
     if (twa < -180.0)
       twa += 360.0;
@@ -906,8 +909,9 @@ void Race::MakeTrack() const {
     }
 
     if (!dc->m_is_twa)
-        PositionBearingDistanceMercator_Plugin(
-            current_lat, current_lon, dc->m_course, total_dist, &current_lat, &current_lon);
+      PositionBearingDistanceMercator_Plugin(current_lat, current_lon,
+                                             dc->m_course, total_dist,
+                                             &current_lat, &current_lon);
   }
 
   AddPlugInTrack(&track);  // Note: Contents are copied

@@ -27,10 +27,8 @@
 #include <wx/datetime.h>
 
 typedef void CURL;
-namespace pugi { class xml_document; }
 class PlugIn_Waypoint;
 class sailonline_pi;
-
 
 /**
  * Class that handles SOL delayed commands
@@ -73,7 +71,7 @@ public:
   /// Open connection to sailonline.org and get access token
   bool Login();
 
-  /// Download race XML and extract polar
+  /// Extract polar from race XML
   bool DownloadPolar();
 
   /// Extract waypoints from race XML
