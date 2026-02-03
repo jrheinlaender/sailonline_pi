@@ -36,6 +36,12 @@ Race::Race(sailonline_pi& plugin) : m_sailonline_pi(plugin) {}
 Race::~Race() {}
 
 namespace {
+    // Constants local to this file
+    /// Use this to approximate zero TWA
+    static constexpr double kTwaZero = 1E-3;
+}
+
+namespace {
 // TODO duplicate code with WR plugin
 
 // Performance loss is half the boat speed after the tack/jibe, in percent.
@@ -503,10 +509,13 @@ std::pair<double, double> Race::GetWindData(const wxDateTime& t, double lat,
     return {reply["WIND SPEED"].asDouble() * 3600 / 1852,
             reply["WIND DIR"].asDouble()};
 
+  wxLogMessage("Invalid wind data: %s", reply["Error"].asString());
   return {-1.0, -1.0};
 }
 
 double Race::GetSpeedThroughWater(double tws, double twa) const {
+  if (std::fabs(twa) <= kTwaZero) return 0.0;
+
   Json::Value v;
   Json::FastWriter writer;
 
@@ -523,6 +532,7 @@ double Race::GetSpeedThroughWater(double tws, double twa) const {
   if (reply != Json::nullValue && reply.isMember("BOAT SPEED"))
     return reply["BOAT SPEED"].asDouble();
 
+  wxLogMessage("Invalid speed through water: %s", reply["Error"].asString());
   return -1.0;
 }
 
@@ -543,6 +553,7 @@ std::pair<double, double> Race::GetBoatOptimalAngles(double tws) const {
       reply.isMember("OPT DOWN"))
     return {reply["OPT UP"].asDouble(), reply["OPT DOWN"].asDouble()};
 
+  wxLogMessage("Invalid optimal angles: %s", reply["Error"].asString());
   return {-1.0, -1.0};
 }
 
@@ -624,15 +635,16 @@ void Race::SimplifyDcs() {
 
 namespace {
 // Course change required to reach 93% performance is ca. 100.3 degrees
-// Add 4 seconds of performance recovery at 5kn
+// Add 6 seconds of performance recovery at 5kn
 // TODO Make that precise in calculation below
 // TODO Give safety margin for weather beyond next forecast
-static constexpr double max_recovery = 4.0 * 3.0 / (20.0 * 5.0) / 100.0;
+static constexpr double max_recovery = 6.0 * 3.0 / (20.0 * 5.0) / 100.0;
 static constexpr double course_change_for_max_loss =
     (0.07 + max_recovery) * 180.0 / M_PI * 25.0;
 }  // namespace
 
 void Race::OptimizeManeuvers() {
+  // Note: This assumes that EnrichDcs() has been called
   // TODO If this is called twice on the same list, it will create duplicate
   // TWAs
   // Note: This assumes a symmetric polar throughout
@@ -646,7 +658,7 @@ void Race::OptimizeManeuvers() {
   for (auto p_dc = second_dc; p_dc != m_dcs.end(); ++p_dc) {
     double next_twa = p_dc->m_twa;
     double sign = first_twa > 0.0 ? 1.0 : -1.0;
-    std::cout << "      DC " << p_dc->m_course
+    std::cout << "      DC course" << p_dc->m_course
               << ": Checking course change TWA=" << first_twa << " to "
               << next_twa << std::endl;
 
@@ -743,7 +755,7 @@ void Race::OptimizeManeuvers() {
         m_dcs.emplace(
             p_dc,
             Dc{wxDateTime(p_dc->m_timestamp).Subtract(wxTimeSpan::Seconds(2)),
-               -1.0, -1.0, -sign * 0.001, true});
+               -1.0, -1.0, -sign * kTwaZero, true});
         // ... and the existing dc finalizes the course change to next_twa
       }
     }
