@@ -455,13 +455,13 @@ bool Race::GetWaypoints() {
           wp->m_GUID = wxString::Format("SOL_%s_%s", m_id,
                                         node_wp_child.first_child().value());
         else if (strcmp(node_wp_child.name(), "name") == 0)
-          wp->m_MarkName = node_wp_child.first_child().value();
+          wp->m_MarkName = wxString(node_wp_child.first_child().value()).Trim();
         else if (strcmp(node_wp_child.name(), "lon") == 0) {
-          double lon;
+          double lon = NAN;
           if (wxString(node_wp_child.first_child().value()).ToDouble(&lon))
             wp->m_lon = lon;
         } else if (strcmp(node_wp_child.name(), "lat") == 0) {
-          double lat;
+          double lat = NAN;
           if (wxString(node_wp_child.first_child().value()).ToDouble(&lat))
             wp->m_lat = lat;
         }
@@ -524,6 +524,10 @@ double Race::GetSpeedThroughWater(double tws, double twa) const {
   v["Msg"] = "WR_BOATDATA_REQUEST";
   v["Data"] = "Speed";
   v["Racenumber"] = m_id;
+  if (!m_waypoints.empty()) {
+    v["StartGUID"] = m_waypoints.front()->m_GUID.ToStdString();
+    v["EndGUID"] = m_waypoints.back()->m_GUID.ToStdString();
+  }
   v["tws"] = tws;
   v["twa"] = twa;
 
@@ -545,6 +549,10 @@ std::pair<double, double> Race::GetBoatOptimalAngles(double tws) const {
   v["Msg"] = "WR_BOATDATA_REQUEST";
   v["Data"] = "Angles";
   v["Racenumber"] = m_id;
+  if (!m_waypoints.empty()) {
+    v["StartGUID"] = m_waypoints.front()->m_GUID.ToStdString();
+    v["EndGUID"] = m_waypoints.back()->m_GUID.ToStdString();
+  }
   v["tws"] = tws;
 
   SendPluginMessage("WR_BOATDATA_REQUEST", writer.write(v));
