@@ -68,9 +68,6 @@ public:
   /// Return error messages and clear the error store
   std::vector<std::string> GetErrors();
 
-  /// Open connection to sailonline.org and get access token
-  bool Login();
-
   /// Extract polar from race XML
   bool DownloadPolar();
 
@@ -103,6 +100,9 @@ private:
   std::list<Dc> m_dcs;
 
   std::vector<std::shared_ptr<PlugIn_Waypoint>> m_waypoints;
+
+  /// Open connection to sailonline.org and get access token
+  bool Login();
 
   /// Download detailed raceinfo XML
   wxString GetRaceInfo();

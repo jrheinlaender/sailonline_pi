@@ -265,12 +265,6 @@ bool Race::Login() {
 wxString Race::GetRaceInfo() {
   wxString result;
 
-  if (m_sol_token.empty()) {
-    m_errors.emplace_back("Not logged into race " + m_id +
-                          ", did you register?");
-    return result;
-  }
-
   // Check if raceinfo was already downloaded
   wxFileName raceinfo =
       m_sailonline_pi.GetDataDir(wxString::Format("Race_%s", m_id.c_str()));
@@ -280,6 +274,14 @@ wxString Race::GetRaceInfo() {
     wxFile raceinfo_file(raceinfo.GetFullPath(), wxFile::read);
     raceinfo_file.ReadAll(&result);
     raceinfo_file.Close();
+    return result;
+  }
+
+  Login();
+
+  if (m_sol_token.empty()) {
+    m_errors.emplace_back("Not logged into race " + m_id +
+                          ", did you register?");
     return result;
   }
 

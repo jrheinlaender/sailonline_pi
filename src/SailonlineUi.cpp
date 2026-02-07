@@ -125,6 +125,7 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
   m_ppanel->m_pbutton_downloadpolar->Connect(
       wxEVT_COMMAND_BUTTON_CLICKED,
       wxCommandEventHandler(SailonlineUi::OnPolarDownload), nullptr, this);
+  m_ppanel->m_pbutton_downloadpolar->Disable();
   m_ppanel->m_pbutton_download->Connect(
       wxEVT_COMMAND_BUTTON_CLICKED,
       wxCommandEventHandler(SailonlineUi::OnDcDownload), nullptr, this);
@@ -214,8 +215,7 @@ void SailonlineUi::ShowPage(const int page) {
     }
     case 1:  // Race information
     {
-      if (!m_prace->Login() || !m_prace->DownloadPolar() ||
-          !m_prace->GetWaypoints()) {
+      if (!m_prace->DownloadPolar() || !m_prace->DownloadWaypoints()) {
         wxString errors;
         for (const auto& e : m_prace->GetErrors())
           errors = errors.append(e).append('\n');
@@ -226,6 +226,7 @@ void SailonlineUi::ShowPage(const int page) {
       }
 
       m_ppanel->m_polarname->SetLabel(m_prace->m_polarfile);
+      m_ppanel->m_pbutton_downloadpolar->Enable(true);
 
       for (const auto& wp : m_prace->GetWaypoints()) {
           wxListItem item;
@@ -242,7 +243,6 @@ void SailonlineUi::ShowPage(const int page) {
     }
     case 2:  // DC list
     {
-      // m_prace->Login();
       m_prace->DownloadWaypoints();
       // m_prace->DownloadDcs();
       FillDcList();
