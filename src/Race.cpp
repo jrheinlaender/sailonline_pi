@@ -430,7 +430,7 @@ bool Race::DownloadPolar() {
   return true;
 }
 
-bool Race::GetWaypoints() {
+bool Race::DownloadWaypoints() {
   pugi::xml_document race_doc;
   auto status = race_doc.load_string(GetRaceInfo());
   if (!status) {
@@ -465,17 +465,19 @@ bool Race::GetWaypoints() {
           if (wxString(node_wp_child.first_child().value()).ToDouble(&lat))
             wp->m_lat = lat;
         }
+      }
 
-        m_waypoints.emplace_back(wp);
+      m_waypoints.emplace_back(wp);
 
         // Add permanent waypoint to main application. Note: data is copied
         if (!UpdateSingleWaypoint(wp.get())) AddSingleWaypoint(wp.get(), true);
-      }
     }
   }
 
   return true;
 }
+
+const std::vector<std::shared_ptr<PlugIn_Waypoint>>& Race::GetWaypoints() const { return m_waypoints; }
 
 const std::list<Dc>& Race::GetDcs() const { return m_dcs; }
 

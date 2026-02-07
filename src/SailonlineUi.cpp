@@ -108,6 +108,10 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
       wxBookCtrlEventHandler(SailonlineUi::OnPageChanged), nullptr, this);
   m_ppanel->m_notebook->SetSelection(0);  // Show first tab
 
+  m_ppanel->m_pwaypointlist->ClearAll();
+  m_ppanel->m_pwaypointlist->InsertColumn(0, _("Id"));
+  m_ppanel->m_pwaypointlist->InsertColumn(1, _("Name"));
+
   m_ppanel->m_pdclist->ClearAll();
   m_ppanel->m_pdclist->InsertColumn(0, _("Time"));
   m_ppanel->m_pdclist->InsertColumn(1, _("Type"));
@@ -223,11 +227,23 @@ void SailonlineUi::ShowPage(const int page) {
 
       m_ppanel->m_polarname->SetLabel(m_prace->m_polarfile);
 
+      for (const auto& wp : m_prace->GetWaypoints()) {
+          wxListItem item;
+        long index = m_ppanel->m_pwaypointlist->InsertItem(
+            m_ppanel->m_pwaypointlist->GetItemCount(), item);
+        m_ppanel->m_pwaypointlist->SetItem(index, 0, wp->m_GUID);
+        m_ppanel->m_pwaypointlist->SetItem(index, 1, wp->m_MarkName);
+      }
+
+        for (int i = 0; i < m_ppanel->m_pwaypointlist->GetColumnCount(); ++i)
+            m_ppanel->m_pwaypointlist->SetColumnWidth(i, wxLIST_AUTOSIZE);
+
       break;
     }
     case 2:  // DC list
     {
       // m_prace->Login();
+      m_prace->DownloadWaypoints();
       // m_prace->DownloadDcs();
       FillDcList();
 

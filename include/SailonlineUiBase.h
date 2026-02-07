@@ -146,6 +146,7 @@ class SailonlinePanel : public wxPanel
 		wxPanel* m_panel11;
 		wxPanel* m_panel12;
 		wxStaticText* m_staticText168;
+		wxStaticText* m_staticText170;
 		wxPanel* m_dcs;
 
 		// Virtual event handlers, override them in your derived class
@@ -175,6 +176,7 @@ class SailonlinePanel : public wxPanel
 		wxPanel* m_raceinfo;
 		wxStaticText* m_polarname;
 		wxButton* m_pbutton_downloadpolar;
+		wxListCtrl* m_pwaypointlist;
 		wxListCtrl* m_pdclist;
 		wxButton* m_pbutton_download;
 		wxButton* m_pbutton_upload;

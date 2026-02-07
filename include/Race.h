@@ -75,7 +75,9 @@ public:
   bool DownloadPolar();
 
   /// Extract waypoints from race XML
-  bool GetWaypoints();
+  bool DownloadWaypoints();
+
+  const std::vector<std::shared_ptr<PlugIn_Waypoint>>& GetWaypoints() const;
 
   const std::list<Dc>& GetDcs() const;
   std::list<Dc>& GetDcs();
