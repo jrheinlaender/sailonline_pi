@@ -126,6 +126,9 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
       wxEVT_COMMAND_BUTTON_CLICKED,
       wxCommandEventHandler(SailonlineUi::OnPolarDownload), nullptr, this);
   m_ppanel->m_pbutton_downloadpolar->Disable();
+  m_ppanel->m_pbutton_updateposition->Connect(
+      wxEVT_COMMAND_BUTTON_CLICKED,
+      wxCommandEventHandler(SailonlineUi::OnUpdatePosition), nullptr, this);
   m_ppanel->m_pbutton_download->Connect(
       wxEVT_COMMAND_BUTTON_CLICKED,
       wxCommandEventHandler(SailonlineUi::OnDcDownload), nullptr, this);
@@ -149,6 +152,9 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
 SailonlineUi::~SailonlineUi() {
   std::cout << "Destructor of SailonlineUi" << std::endl;
 
+  m_ppanel->m_pbutton_updateposition->Connect(
+      wxEVT_COMMAND_BUTTON_CLICKED,
+      wxCommandEventHandler(SailonlineUi::OnUpdatePosition), nullptr, this);
   m_ppanel->m_pracelist->Disconnect(
       wxEVT_LIST_ITEM_SELECTED,
       wxListEventHandler(SailonlineUi::OnRaceSelected), nullptr, this);
@@ -249,6 +255,33 @@ void SailonlineUi::ShowPage(const int page) {
 
       break;
     }
+    case 3: // Routing
+    {
+      if (!m_prace->DownloadBoatUrl()) {
+        wxString errors;
+        for (const auto& e : m_prace->GetErrors())
+          errors = errors.append(e).append('\n');
+        wxLogMessage(errors);
+        OCPNMessageBox_PlugIn(this, errors,
+                              "Error downloading boat position URL", wxOK);
+        return;
+      }
+
+      const auto& [latitude, longitude, course] = m_prace->GetBoatPosition();
+
+      if (latitude == 0.0 && longitude == 0.0 && course == 0.0) {
+        wxString errors;
+        for (const auto& e : m_prace->GetErrors())
+          errors = errors.append(e).append('\n');
+        wxLogMessage(errors);
+        OCPNMessageBox_PlugIn(this, errors,
+                              "Error downloading boat position information", wxOK);
+        return;
+      }
+
+      m_ppanel->m_latitude->SetLabel(wxString::Format("%.3f", latitude));
+      m_ppanel->m_longitude->SetLabel(wxString::Format("%.3f", longitude));
+      m_ppanel->m_course->SetLabel(wxString::Format("%.3f", course));
   }
 }
 
@@ -274,10 +307,14 @@ void SailonlineUi::OnPageChanged(wxBookCtrlEvent& event) {
   ShowPage(event.GetSelection());
 }
 
+void SailonlineUi::OnUpdatePosition(wxCommandEvent&) {
+    ShowPage(1);
+}
 void SailonlineUi::OnPolarDownload(wxCommandEvent& event) {}
 
 void SailonlineUi::OnDcDownload(wxCommandEvent& event) {}
 void SailonlineUi::OnDcUpload(wxCommandEvent& event) {}
+
 
 void SailonlineUi::FillDcList() {
   // TODO Error message

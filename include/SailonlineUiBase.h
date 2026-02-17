@@ -148,6 +148,10 @@ class SailonlinePanel : public wxPanel
 		wxStaticText* m_staticText168;
 		wxStaticText* m_staticText170;
 		wxPanel* m_dcs;
+		wxPanel* m_routing;
+		wxStaticText* m_staticText171;
+		wxStaticText* m_staticText173;
+		wxStaticText* m_staticText175;
 
 		// Virtual event handlers, override them in your derived class
 		virtual void OnEditPositionClick( wxMouseEvent& event ) { event.Skip(); }
@@ -184,6 +188,10 @@ class SailonlinePanel : public wxPanel
 		wxButton* m_pbutton_totrack;
 		wxButton* m_pbutton_modify;
 		wxButton* m_pbutton_copydcs;
+		wxStaticText* m_latitude;
+		wxButton* m_pbutton_updateposition;
+		wxStaticText* m_longitude;
+		wxStaticText* m_course;
 
 		SailonlinePanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 800,502 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 

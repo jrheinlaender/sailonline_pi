@@ -58,6 +58,7 @@ private:
   void OnRaceSelected(wxListEvent& event);
   void OnPageChanged(wxBookCtrlEvent& event);
   void OnPolarDownload(wxCommandEvent& event);
+  void OnUpdatePosition(wxCommandEvent& event);
   void OnDcDownload(wxCommandEvent& event);
   void OnDcUpload(wxCommandEvent& event);
   void OnDcFromTrack(wxCommandEvent& event);

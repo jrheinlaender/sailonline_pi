@@ -40,6 +40,8 @@ const static std::string kSolPost =
 const static std::string kSolRaceXmlUrl =
     "https://www.sailonline.org/webclient/"
     "auth_raceinfo_$$racenumber.xml?token=$$token";
+const static std::string kSolBoatDataUrl =
+    "https://www.sailonline.org$$boaturl?token=$$token";
 };  // namespace SolApi
 
 #endif

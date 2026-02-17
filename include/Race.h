@@ -74,10 +74,16 @@ public:
   /// Extract waypoints from race XML
   bool DownloadWaypoints();
 
+  /// Extract URL of boat data XML from race XML
+  bool DownloadBoatUrl();
+
   const std::vector<std::shared_ptr<PlugIn_Waypoint>>& GetWaypoints() const;
 
   const std::list<Dc>& GetDcs() const;
   std::list<Dc>& GetDcs();
+
+  /// Get latitude, longitude and course of boat
+  std::tuple<double, double, double> GetBoatPosition();
 
   /// Enrich the DC list with calculated values for diagnostic purposes
   void EnrichDcs();

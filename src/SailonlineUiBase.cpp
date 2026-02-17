@@ -358,31 +358,32 @@ SailonlinePanel::SailonlinePanel( wxWindow* parent, wxWindowID id, const wxPoint
 	m_racedata->SetSizer( bSizer8 );
 	m_racedata->Layout();
 	bSizer8->Fit( m_racedata );
-	m_notebook->AddPage( m_racedata, _("Race"), true );
+	m_notebook->AddPage( m_racedata, _("Race"), false );
 	m_raceinfo = new wxPanel( m_notebook, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	wxBoxSizer* bSizer11;
 	bSizer11 = new wxBoxSizer( wxVERTICAL );
 
-	wxFlexGridSizer* fgSizer1061;
-	fgSizer1061 = new wxFlexGridSizer( 0, 3, 0, 0 );
-	fgSizer1061->SetFlexibleDirection( wxBOTH );
-	fgSizer1061->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
+	wxBoxSizer* bSizer16;
+	bSizer16 = new wxBoxSizer( wxHORIZONTAL );
 
 	m_staticText168 = new wxStaticText( m_raceinfo, wxID_ANY, _("Polar"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText168->Wrap( -1 );
 	m_staticText168->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
 
-	fgSizer1061->Add( m_staticText168, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer16->Add( m_staticText168, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	m_polarname = new wxStaticText( m_raceinfo, wxID_ANY, _("not loaded"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT|wxST_ELLIPSIZE_END );
+	m_polarname = new wxStaticText( m_raceinfo, wxID_ANY, _("not loaded"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT );
 	m_polarname->Wrap( -1 );
-	fgSizer1061->Add( m_polarname, 1, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer16->Add( m_polarname, 1, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
 
 	m_pbutton_downloadpolar = new wxButton( m_raceinfo, wxID_ANY, _("Download"), wxDefaultPosition, wxDefaultSize, 0 );
-	fgSizer1061->Add( m_pbutton_downloadpolar, 0, wxALL, 5 );
+	bSizer16->Add( m_pbutton_downloadpolar, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 
-	bSizer11->Add( fgSizer1061, 0, wxEXPAND, 5 );
+	bSizer16->Add( 0, 0, 1, wxEXPAND, 5 );
+
+
+	bSizer11->Add( bSizer16, 1, wxEXPAND, 5 );
 
 	wxBoxSizer* bSizer121;
 	bSizer121 = new wxBoxSizer( wxVERTICAL );
@@ -409,10 +410,13 @@ SailonlinePanel::SailonlinePanel( wxWindow* parent, wxWindowID id, const wxPoint
 	bSizer11->Add( bSizer121, 1, wxEXPAND, 5 );
 
 
+	bSizer11->Add( 0, 0, 1, wxEXPAND, 5 );
+
+
 	m_raceinfo->SetSizer( bSizer11 );
 	m_raceinfo->Layout();
 	bSizer11->Fit( m_raceinfo );
-	m_notebook->AddPage( m_raceinfo, _("Info"), false );
+	m_notebook->AddPage( m_raceinfo, _("Info"), true );
 	m_dcs = new wxPanel( m_notebook, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	wxBoxSizer* bSizer51;
 	bSizer51 = new wxBoxSizer( wxVERTICAL );
@@ -462,6 +466,54 @@ SailonlinePanel::SailonlinePanel( wxWindow* parent, wxWindowID id, const wxPoint
 	m_dcs->Layout();
 	bSizer51->Fit( m_dcs );
 	m_notebook->AddPage( m_dcs, _("DC list"), false );
+	m_routing = new wxPanel( m_notebook, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer15;
+	bSizer15 = new wxBoxSizer( wxVERTICAL );
+
+	wxFlexGridSizer* fgSizer107;
+	fgSizer107 = new wxFlexGridSizer( 0, 3, 0, 0 );
+	fgSizer107->AddGrowableCol( 1 );
+	fgSizer107->SetFlexibleDirection( wxBOTH );
+	fgSizer107->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
+
+	m_staticText171 = new wxStaticText( m_routing, wxID_ANY, _("Latitude"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText171->Wrap( -1 );
+	fgSizer107->Add( m_staticText171, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	m_latitude = new wxStaticText( m_routing, wxID_ANY, _("0"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_latitude->Wrap( -1 );
+	fgSizer107->Add( m_latitude, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	m_pbutton_updateposition = new wxButton( m_routing, wxID_ANY, _("Update"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer107->Add( m_pbutton_updateposition, 0, wxALL, 5 );
+
+	m_staticText173 = new wxStaticText( m_routing, wxID_ANY, _("Longitude"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText173->Wrap( -1 );
+	fgSizer107->Add( m_staticText173, 0, wxALL, 5 );
+
+	m_longitude = new wxStaticText( m_routing, wxID_ANY, _("0"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_longitude->Wrap( -1 );
+	fgSizer107->Add( m_longitude, 0, wxALL, 5 );
+
+
+	fgSizer107->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	m_staticText175 = new wxStaticText( m_routing, wxID_ANY, _("Course"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText175->Wrap( -1 );
+	fgSizer107->Add( m_staticText175, 0, wxALL, 5 );
+
+	m_course = new wxStaticText( m_routing, wxID_ANY, _("0"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_course->Wrap( -1 );
+	fgSizer107->Add( m_course, 0, wxALL, 5 );
+
+
+	bSizer15->Add( fgSizer107, 1, wxEXPAND, 5 );
+
+
+	m_routing->SetSizer( bSizer15 );
+	m_routing->Layout();
+	bSizer15->Fit( m_routing );
+	m_notebook->AddPage( m_routing, _("Routing"), false );
 
 	bSizer5->Add( m_notebook, 1, wxEXPAND | wxALL, 5 );
 

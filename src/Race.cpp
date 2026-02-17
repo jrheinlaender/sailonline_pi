@@ -176,9 +176,12 @@ std::string Race::SetPlaceholders(const std::string& input) const {
       {"$$password", "21shukur%3AGozorI21"},
       {"$$username", "Ibis"},
       {"$$racenumber", ""},
-      {"$$token", ""}};
+      {"$$token", ""},
+      {"$$boaturl", "/webclient/boat.xml"}};
+
   placeholders["$$racenumber"] = m_id;
   placeholders["$$token"] = m_sol_token;
+  placeholders["$$boaturl"] = m_url;
 
   std::string result = input;
 
@@ -343,11 +346,6 @@ wxString Race::GetRaceInfo() {
   // https://www.sailonline.org/webclient/traces_1967.xml?token=<TOKEN>
   //    zlib-compressed xml file containing tracks of all boats?
   // tag <boaturl>:
-  //    Text file
-  //       3092 449865 Ibis 2025/12/01 11:00:00 1764586800UTCC 2025/12/15
-  //       18:52:07 1765824727UTCC 0.0 3.53605193784 3.32537832275 0.0
-  //       0.966386722578 0.0 0.0 105.5979118 -10.3839613937 3.53605193784 54
-  //       0 twa
 
   // Polar <boat><vpp><tws_splined> integer 0:max, <twa_splined> integer
   // 0:180, <bs_splined> float
@@ -479,11 +477,108 @@ bool Race::DownloadWaypoints() {
   return true;
 }
 
+bool Race::DownloadBoatUrl() {
+  pugi::xml_document race_doc;
+  auto status = race_doc.load_string(GetRaceInfo());
+  if (!status) {
+    m_errors.emplace_back("Could not parse race file: %s",
+                          status.description());
+    return false;
+  }
+
+  pugi::xml_node node_url = race_doc.select_node("/race/boaturl").node();
+  m_url = node_url.first_child().value();
+
+  return true;
+}
+
 const std::vector<std::shared_ptr<PlugIn_Waypoint>>& Race::GetWaypoints() const { return m_waypoints; }
 
 const std::list<Dc>& Race::GetDcs() const { return m_dcs; }
 
 std::list<Dc>& Race::GetDcs() { return m_dcs; }
+
+std::tuple<double, double, double> Race::GetBoatPosition() {
+  Login();
+
+  if (m_sol_token.empty()) {
+    m_errors.emplace_back("Not logged into race " + m_id +
+                          ", did you register?");
+    return {};
+  }
+
+  CURLcode cresult = curl_global_init(CURL_GLOBAL_ALL);
+  if (cresult != CURLE_OK) {
+    m_errors.emplace_back("Curl error: " + std::to_string(cresult));
+    return {};
+  }
+
+  CURL* curl = curl_easy_init();
+  if (curl == nullptr) {
+    m_errors.emplace_back("Curl error: curl_easy_init() failed");
+    return {};
+  }
+
+  std::string boatdata_url = SetPlaceholders(SolApi::kSolBoatDataUrl);
+  curl_easy_setopt(curl, CURLOPT_URL, boatdata_url.c_str());
+  curl_easy_setopt(curl, CURLOPT_HTTPGET,
+                   1L);  // Otherwise curl will try to POST
+  // Setup function to catch the page contents. This also suppresses output on
+  // stdout
+  std::string boatdata;
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_cb);
+  curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&boatdata);
+  if (!CallCurl(curl)) {
+    m_errors.emplace_back("Curl error: GET of boat data failed");
+    curl_easy_cleanup(curl);
+    return {};
+  }
+
+  curl_easy_cleanup(curl);
+
+  pugi::xml_document boatdata_doc;
+  auto status = boatdata_doc.load_string(boatdata.c_str());
+  if (!status) {
+    m_errors.emplace_back("Could not parse boat data file: %s",
+                          status.description());
+    return {};
+  }
+
+  pugi::xml_node node = boatdata_doc.select_node("/data/boat/lat").node();
+  double latitude = std::stod(node.first_child().value());
+  node = boatdata_doc.select_node("/data/boat/lon").node();
+  double longitude = std::stod(node.first_child().value());
+  node = boatdata_doc.select_node("/data/boat/cog").node();
+  double course = std::stod(node.first_child().value()) / M_PI * 180.0;
+
+  /**
+   * The downloaded xml file has the following information
+   * <data>
+   *     <lmi>0</lmi>
+   *     <boat>
+   *         <id>452194</id>
+   *         <name>Boat name</name>
+   *         <start_time>2026/02/02 11:00:00 1770030000UTCC</start_time>
+   *         <finish_time></finish_time>
+   *         <twa>-1.44488360875</twa> in radians
+   *         <twd>0.662688729491</twd> in radians
+   *         <tws>7.85210627021</tws> in m/s
+   *         <sog>20.4389749219</sog> in kn
+   *         <efficiency>1.0</efficiency>
+   *         <dtg>288.38021393</dtg> distance to go in nautical miles
+   *         <dbl>4.81106013291</dbl> distance behind leader
+   *         <lon>-130.832298414</lon>
+   *         <lat>44.8420935342</lat>
+   *         <cog>2.10757233825</cog> in radians
+   *         <ranking>9</ranking>
+   *         <current_leg>0</current_leg>
+   *         <last_cmd_type>cc</last_cmd_type>
+   *     </boat>
+   * </data>
+   */
+
+    return {latitude, longitude, course};
+}
 
 std::pair<double, double> Race::GetWindData(const wxDateTime& t, double lat,
                                             double lon) const {
