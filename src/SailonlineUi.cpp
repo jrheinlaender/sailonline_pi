@@ -203,6 +203,118 @@ bool SailonlineUi::Show(bool show) {
   return SailonlineUiBase::Show(show);
 }
 
+namespace {
+std::string LatitudeToString(double mLat) {
+  wxString singlezero = "0";
+  wxString mDegLat;
+
+  int degLat = std::abs(mLat);
+  wxString finalDegLat = wxString::Format("%i", degLat);
+
+  int myL = finalDegLat.length();
+  switch (myL) {
+    case (1): {
+      mDegLat = singlezero + finalDegLat;
+      break;
+    }
+    case (2): {
+      mDegLat = finalDegLat;
+      break;
+    }
+  }
+
+  double minLat = std::abs(mLat) - degLat;
+  double decLat = minLat * 60;
+
+  wxString returnLat;
+
+  if (mLat >= 0) {
+    if (decLat < 10) {
+      returnLat = mDegLat + "0" + wxString::Format("%.6f", decLat) + ",N,";
+    } else {
+      returnLat = mDegLat + wxString::Format("%.6f", decLat) + ",N,";
+    }
+
+  } else if (mLat < 0) {
+    if (decLat < 10) {
+      returnLat = mDegLat + "0" + wxString::Format("%.6f", decLat) + ",S,";
+    } else {
+      returnLat = mDegLat + wxString::Format("%.6f", decLat) + ",S,";
+    }
+  }
+
+  return returnLat.ToStdString();
+}
+
+std::string LongitudeToString(double mLon) {
+  wxString mDecLon;
+  wxString mDegLon;
+  double decValue;
+  wxString returnLon;
+  wxString doublezero = "00";
+  wxString singlezero = "0";
+
+  int degLon = fabs(mLon);
+  wxString inLon = wxString::Format("%i", degLon);
+
+  int myL = inLon.length();
+  switch (myL) {
+    case (1): {
+      mDegLon = doublezero + inLon;
+      break;
+    }
+    case (2): {
+      mDegLon = singlezero + inLon;
+      break;
+    }
+    case (3): {
+      mDegLon = inLon;
+      break;
+    }
+  }
+  decValue = std::abs(mLon) - degLon;
+  double decLon = decValue * 60;
+
+  if (mLon >= 0) {
+    if (decLon < 10) {
+      returnLon = mDegLon + "0" + wxString::Format("%.6f", decLon) + ",E,";
+    } else {
+      returnLon = mDegLon + wxString::Format("%.6f", decLon) + ",E,";
+    }
+
+  } else {
+    if (decLon < 10) {
+      returnLon = mDegLon + "0" + wxString::Format("%.6f", decLon) + ",W,";
+    } else {
+      returnLon = mDegLon + wxString::Format("%.6f", decLon) + ",W,";
+    }
+  }
+  return returnLon.ToStdString();
+}
+
+std::string makeCheckSum(const std::string& sentence) {
+  unsigned char XOR = 0;
+  for (size_t i = 0; i < sentence.size(); i++) XOR ^= (unsigned char)sentence[i];
+  std::stringstream tmpss;
+  tmpss << std::hex << (int)XOR;
+  return tmpss.str();
+}
+
+std::string createGLLSentence(const wxDateTime& myDateTime, const double lat,
+                                const double lon) {
+  //Example: $IIGLL,5027.776667,N,412.690754,W,123327,A*26
+  std::string sentence = "IIGLL," + LatitudeToString(lat)
+    + LongitudeToString(lon)
+    + myDateTime.Format("%H%M%S").ToStdString() + ",A";
+  return "$" + sentence + "*" + makeCheckSum(sentence);
+}
+
+std::string createHDTSentence(const double heading) {
+  std::string sentence = "IIHDT," + std::to_string(heading) + "," + "T";
+  return "$" + sentence + "*" + makeCheckSum(sentence);
+}
+}
+
 void SailonlineUi::ShowPage(const int page) {
   // TODO explain to user why it's not working
   if (m_prace == nullptr) return;
@@ -285,6 +397,13 @@ void SailonlineUi::ShowPage(const int page) {
       m_ppanel->m_latitude->SetLabel(wxString::Format("%.3f", latitude));
       m_ppanel->m_longitude->SetLabel(wxString::Format("%.3f", longitude));
       m_ppanel->m_course->SetLabel(wxString::Format("%.3f", course));
+
+      // Move boat to position
+      std::string GLL = createGLLSentence(wxDateTime::Now(), latitude, longitude);
+      std::string HDT = createHDTSentence(course);
+      PushNMEABuffer(GLL + "\r\n");
+      PushNMEABuffer(HDT + "\r\n");
+    }
   }
 }
 
