@@ -87,8 +87,8 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
     wxListItem item;
     long index = m_ppanel->m_pracelist->InsertItem(
         m_ppanel->m_pracelist->GetItemCount(), item);
-    m_ppanel->m_pracelist->SetItem(index, 0, race.second.m_id);
-    m_ppanel->m_pracelist->SetItem(index, 1, race.second.m_name);
+    m_ppanel->m_pracelist->SetItem(index, 0, race.second->m_id);
+    m_ppanel->m_pracelist->SetItem(index, 1, race.second->m_name);
   }
 
   // Finish

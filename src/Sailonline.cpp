@@ -86,33 +86,33 @@ Sailonline::Sailonline(sailonline_pi& plugin) : m_sailonline_pi(plugin) {
   for (pugi::xml_node node_race = node_races.first_child();
        node_race != nullptr; node_race = node_race.next_sibling()) {
     if (strcmp(node_race.name(), "race") == 0) {
-      Race race(m_sailonline_pi);
+      std::shared_ptr<Race> prace = std::make_shared<Race>(m_sailonline_pi);
 
       for (pugi::xml_node node_race_child = node_race.first_child();
            node_race_child != nullptr;
            node_race_child = node_race_child.next_sibling()) {
         if (strcmp(node_race_child.name(), "id") == 0) {
-          race.m_id = node_race_child.first_child().value();
-          boost::trim(race.m_id);
+          prace->m_id = node_race_child.first_child().value();
+          boost::trim(prace->m_id);
         } else if (strcmp(node_race_child.name(), "name") == 0) {
-          race.m_name = node_race_child.first_child().value();
-          boost::trim(race.m_name);
+          prace->m_name = node_race_child.first_child().value();
+          boost::trim(prace->m_name);
         } else if (strcmp(node_race_child.name(), "description") == 0) {
-          race.m_description = node_race_child.first_child().value();
-          boost::trim(race.m_description);
+          prace->m_description = node_race_child.first_child().value();
+          boost::trim(prace->m_description);
         } else if (strcmp(node_race_child.name(), "message") == 0) {
-          race.m_message = node_race_child.first_child().value();
-          boost::trim(race.m_message);
+          prace->m_message = node_race_child.first_child().value();
+          boost::trim(prace->m_message);
         } else if (strcmp(node_race_child.name(), "start_time") == 0) {
-          race.m_start = node_race_child.first_child().value();
-          boost::trim(race.m_start);
+          prace->m_start = node_race_child.first_child().value();
+          boost::trim(prace->m_start);
         } else if (strcmp(node_race_child.name(), "url") == 0) {
-          race.m_url = node_race_child.first_child().value();
-          boost::trim(race.m_url);
+          prace->m_url = node_race_child.first_child().value();
+          boost::trim(prace->m_url);
         }
       }
 
-      m_races.emplace(race.m_id, std::move(race));
+      m_races.emplace(prace->m_id, std::move(prace));
     }
   }
 }
@@ -122,11 +122,11 @@ Sailonline::~Sailonline() {
 
 }
 
-std::unique_ptr<Race> Sailonline::GetRace(const std::string& racenumber) const {
+std::shared_ptr<Race> Sailonline::GetRace(const std::string& racenumber) const {
   auto prace = m_races.find(racenumber);
   if (prace == m_races.end()) return nullptr;
 
-  return std::make_unique<Race>(prace->second);
+  return prace->second;
 }
 
 std::vector<std::string> Sailonline::GetErrors() {

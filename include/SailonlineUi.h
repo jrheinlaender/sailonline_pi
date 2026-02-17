@@ -44,7 +44,7 @@ private:
   SailonlinePanel* m_ppanel;
 
   // Current race visible in UI
-  std::unique_ptr<Race> m_prace;
+  std::shared_ptr<Race> m_prace;
 
   std::vector<std::string> m_init_errors;
 

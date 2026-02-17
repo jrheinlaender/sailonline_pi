@@ -38,17 +38,17 @@ public:
   /// Return error messages and clear the error store
   std::vector<std::string> GetErrors();
 
-  const std::unordered_map<std::string, Race>& GetRaces() const {
+  const std::unordered_map<std::string, std::shared_ptr<Race>>& GetRaces() const {
     return m_races;
   }
-  std::unique_ptr<Race> GetRace(const std::string& racenumber) const;
+  std::shared_ptr<Race> GetRace(const std::string& racenumber) const;
 
 private:
   sailonline_pi& m_sailonline_pi;
 
   std::vector<std::string> m_errors;
 
-  std::unordered_map<std::string, Race> m_races;
+  std::unordered_map<std::string, std::shared_ptr<Race>> m_races;
 
   // Downloading
   void OnDownloadEvent(OCPN_downloadEvent& ev);
