@@ -152,7 +152,10 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
 SailonlineUi::~SailonlineUi() {
   std::cout << "Destructor of SailonlineUi" << std::endl;
 
-  m_ppanel->m_pbutton_updateposition->Connect(
+  m_ppanel->m_pbutton_downloadpolar->Disconnect(
+      wxEVT_COMMAND_BUTTON_CLICKED,
+      wxCommandEventHandler(SailonlineUi::OnPolarDownload), nullptr, this);
+  m_ppanel->m_pbutton_updateposition->Disconnect(
       wxEVT_COMMAND_BUTTON_CLICKED,
       wxCommandEventHandler(SailonlineUi::OnUpdatePosition), nullptr, this);
   m_ppanel->m_pracelist->Disconnect(
@@ -298,7 +301,7 @@ void SailonlineUi::OnRaceSelected(wxListEvent& event) {
   // TODO Clear panel if nothing is found?
 
   // Show race description
-  ShowPage(0);
+  m_ppanel->m_notebook->SetSelection(0);
 }
 
 void SailonlineUi::OnPageChanged(wxBookCtrlEvent& event) {
@@ -310,11 +313,11 @@ void SailonlineUi::OnPageChanged(wxBookCtrlEvent& event) {
 void SailonlineUi::OnUpdatePosition(wxCommandEvent&) {
     ShowPage(1);
 }
-void SailonlineUi::OnPolarDownload(wxCommandEvent& event) {}
 
-void SailonlineUi::OnDcDownload(wxCommandEvent& event) {}
-void SailonlineUi::OnDcUpload(wxCommandEvent& event) {}
+void SailonlineUi::OnPolarDownload(wxCommandEvent&) {}
 
+void SailonlineUi::OnDcDownload(wxCommandEvent&) {}
+void SailonlineUi::OnDcUpload(wxCommandEvent&) {}
 
 void SailonlineUi::FillDcList() {
   // TODO Error message
@@ -356,7 +359,7 @@ void SailonlineUi::FillDcList() {
     m_ppanel->m_pdclist->SetColumnWidth(i, wxLIST_AUTOSIZE);
 }
 
-void SailonlineUi::OnDcFromTrack(wxCommandEvent& event) {
+void SailonlineUi::OnDcFromTrack(wxCommandEvent&) {
   if (m_prace == nullptr) return;
 
   FromTrackDialog dlg(this);
@@ -392,13 +395,13 @@ void SailonlineUi::OnDcFromTrack(wxCommandEvent& event) {
   }
 }
 
-void SailonlineUi::OnDcToTrack(wxCommandEvent& event) {
+void SailonlineUi::OnDcToTrack(wxCommandEvent&) {
   if (m_prace == nullptr) return;
 
   m_prace->MakeTrack();
 }
 
-void SailonlineUi::OnDcModify(wxCommandEvent& event) {
+void SailonlineUi::OnDcModify(wxCommandEvent&) {
   if (m_prace == nullptr) return;
 
   m_prace->SimplifyDcs();
@@ -407,7 +410,7 @@ void SailonlineUi::OnDcModify(wxCommandEvent& event) {
   FillDcList();
 }
 
-void SailonlineUi::OnCopyDcs(wxCommandEvent& event) {
+void SailonlineUi::OnCopyDcs(wxCommandEvent&) {
   if (m_prace == nullptr) return;
 
   wxString dc_list;

@@ -244,7 +244,6 @@ bool Race::Login() {
   std::string postdata = SetPlaceholders(SolApi::kSolPost) + csrftoken;
   curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postdata.c_str());
   pagedata.clear();
-  std::cout << "POST " << postdata << std::endl;
   if (!CallCurl(curl)) return false;
 
   // TODO Can this be more stable than scanning the javascript code of the page?
@@ -312,11 +311,13 @@ wxString Race::GetRaceInfo() {
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&pagedata);
   if (!CallCurl(curl)) {
     m_errors.emplace_back("Curl error: GET of race XML failed");
+    curl_easy_cleanup(curl);
     return result;
   }
   if (pagedata == "Bad token") {
     m_errors.emplace_back("Race token is invalid. Try logging in again");
     // TODO but currently the UI doesn't offer any way of re-logging-in ...
+    curl_easy_cleanup(curl);
     return result;
   }
 
@@ -324,6 +325,7 @@ wxString Race::GetRaceInfo() {
   wxFile raceinfo_file(raceinfo.GetFullPath(), wxFile::write);
   if (raceinfo_file.Error()) {
     m_errors.emplace_back("Could not write to auth_raceinfo_" + m_id + ".xml");
+    curl_easy_cleanup(curl);
     return result;
   }
   raceinfo_file.Write(pagedata);
@@ -469,8 +471,8 @@ bool Race::DownloadWaypoints() {
 
       m_waypoints.emplace_back(wp);
 
-        // Add permanent waypoint to main application. Note: data is copied
-        if (!UpdateSingleWaypoint(wp.get())) AddSingleWaypoint(wp.get(), true);
+      // Add permanent waypoint to main application. Note: data is copied
+      if (!UpdateSingleWaypoint(wp.get())) AddSingleWaypoint(wp.get(), true);
     }
   }
 

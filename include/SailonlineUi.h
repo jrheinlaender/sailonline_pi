@@ -53,8 +53,8 @@ private:
 
   // Events
   // Don't destroy, otherwise sailonline_pi::DeInit() will crash
-  void OnClose(wxCloseEvent& event) { Hide(); }
-  void OnClose(wxCommandEvent& event) { Hide(); }
+  void OnClose(wxCloseEvent&) { Hide(); }
+  void OnClose(wxCommandEvent&) { Hide(); }
   void OnRaceSelected(wxListEvent& event);
   void OnPageChanged(wxBookCtrlEvent& event);
   void OnPolarDownload(wxCommandEvent& event);
