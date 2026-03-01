@@ -170,6 +170,31 @@ bool Race::CallCurl(CURL* curl) {
   return true;
 }
 
+std::string Race::GetUrl(const std::string& url, const wxFileName& target,
+                         const std::string& message) {
+  if (!(OCPN_downloadFile(
+            SetPlaceholders(url), target.GetFullPath(), "Downloading", message,
+            wxBitmap(), m_sailonline_pi.GetParentWindow(),
+            OCPN_DLDS_URL | OCPN_DLDS_ELAPSED_TIME | OCPN_DLDS_SPEED |
+                OCPN_DLDS_CAN_ABORT /*| OCPN_DLDS_AUTO_CLOSE*/,
+            30) == OCPN_DL_NO_ERROR)) {
+    m_errors.emplace_back(message + "\nFailed to download from " + url);
+    return {};
+  }
+
+  wxString result;
+  wxFile file(target.GetFullPath(), wxFile::read);
+  file.ReadAll(&result);
+  file.Close();
+
+  if (result.empty()) {
+    m_errors.emplace_back(message + "\nDownloaded file is empty (" + url + ")");
+    return {};
+  }
+
+  return result.ToStdString();
+}
+
 std::string Race::SetPlaceholders(const std::string& input) const {
   // TODO Should this map be a member of class Race?
   static std::map<std::string, std::string> placeholders{
@@ -271,66 +296,30 @@ wxString Race::GetRaceInfo() {
   wxFileName raceinfo =
       m_sailonline_pi.GetDataDir(wxString::Format("Race_%s", m_id.c_str()));
   raceinfo.SetFullName(wxString::Format("auth_raceinfo_%s.xml", m_id.c_str()));
-  if (raceinfo.Exists()) {
+  if (!raceinfo.Exists()) {
+    Login();
+
+    if (m_sol_token.empty()) {
+        m_errors.emplace_back("Not logged into race " + m_id +
+                            ", did you register?");
+        return {};
+    }
+
+    wxLogMessage("Downloading auth_raceinfo_%s.xml", m_id);
+    result = GetUrl(SolApi::kSolRaceXmlUrl, raceinfo, "Finding race token");
+    wxLogMessage("Cached raceinfo to auth_raceinfo_%s.xml", m_id.c_str());
+  } else {
     wxLogMessage("Reading cached auth_raceinfo_%s.xml", m_id);
     wxFile raceinfo_file(raceinfo.GetFullPath(), wxFile::read);
     raceinfo_file.ReadAll(&result);
     raceinfo_file.Close();
-    return result;
   }
 
-  Login();
-
-  if (m_sol_token.empty()) {
-    m_errors.emplace_back("Not logged into race " + m_id +
-                          ", did you register?");
-    return result;
-  }
-
-  wxLogMessage("Downloading auth_raceinfo_%s.xml", m_id);
-  CURLcode cresult = curl_global_init(CURL_GLOBAL_ALL);
-  if (cresult != CURLE_OK) {
-    m_errors.emplace_back("Curl error: " + std::to_string(cresult));
-    return result;
-  }
-
-  CURL* curl = curl_easy_init();
-  if (curl == nullptr) {
-    m_errors.emplace_back("Curl error: curl_easy_init() failed");
-    return result;
-  }
-
-  std::string race_url = SetPlaceholders(SolApi::kSolRaceXmlUrl);
-  curl_easy_setopt(curl, CURLOPT_URL, race_url.c_str());
-  curl_easy_setopt(curl, CURLOPT_HTTPGET,
-                   1L);  // Otherwise curl will try to POST
-  // Setup function to catch the page contents. This also suppresses output on
-  // stdout
-  std::string pagedata;
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_cb);
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&pagedata);
-  if (!CallCurl(curl)) {
-    m_errors.emplace_back("Curl error: GET of race XML failed");
-    curl_easy_cleanup(curl);
-    return result;
-  }
-  if (pagedata == "Bad token") {
+  if (result.empty() || result == "Bad token") {
     m_errors.emplace_back("Race token is invalid. Try logging in again");
     // TODO but currently the UI doesn't offer any way of re-logging-in ...
-    curl_easy_cleanup(curl);
-    return result;
+    return {};
   }
-
-  // Write race info to file for later use
-  wxFile raceinfo_file(raceinfo.GetFullPath(), wxFile::write);
-  if (raceinfo_file.Error()) {
-    m_errors.emplace_back("Could not write to auth_raceinfo_" + m_id + ".xml");
-    curl_easy_cleanup(curl);
-    return result;
-  }
-  raceinfo_file.Write(pagedata);
-  raceinfo_file.Close();
-  wxLogMessage("Cached raceinfo to auth_raceinfo_%s.xml", m_id.c_str());
 
   // Available information
   // tag <url>:
@@ -351,8 +340,6 @@ wxString Race::GetRaceInfo() {
 
   // Polar <boat><vpp><tws_splined> integer 0:max, <twa_splined> integer
   // 0:180, <bs_splined> float
-
-  curl_easy_cleanup(curl);
 
   return result;
 }
@@ -509,34 +496,12 @@ std::tuple<double, double, double> Race::GetBoatPosition() {
     return {};
   }
 
-  CURLcode cresult = curl_global_init(CURL_GLOBAL_ALL);
-  if (cresult != CURLE_OK) {
-    m_errors.emplace_back("Curl error: " + std::to_string(cresult));
-    return {};
-  }
-
-  CURL* curl = curl_easy_init();
-  if (curl == nullptr) {
-    m_errors.emplace_back("Curl error: curl_easy_init() failed");
-    return {};
-  }
-
-  std::string boatdata_url = SetPlaceholders(SolApi::kSolBoatDataUrl);
-  curl_easy_setopt(curl, CURLOPT_URL, boatdata_url.c_str());
-  curl_easy_setopt(curl, CURLOPT_HTTPGET,
-                   1L);  // Otherwise curl will try to POST
-  // Setup function to catch the page contents. This also suppresses output on
-  // stdout
-  std::string boatdata;
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_cb);
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&boatdata);
-  if (!CallCurl(curl)) {
-    m_errors.emplace_back("Curl error: GET of boat data failed");
-    curl_easy_cleanup(curl);
-    return {};
-  }
-
-  curl_easy_cleanup(curl);
+  wxFileName boatdata_fn =
+      m_sailonline_pi.GetDataDir(wxString::Format("Race_%s", m_id.c_str()));
+  boatdata_fn.SetFullName("boat.xml");
+  std::string boatdata =
+      GetUrl(SolApi::kSolBoatDataUrl, boatdata_fn, "Finding boat data");
+  if (boatdata.empty()) return {};
 
   pugi::xml_document boatdata_doc;
   auto status = boatdata_doc.load_string(boatdata.c_str());
