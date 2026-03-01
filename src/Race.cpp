@@ -18,7 +18,7 @@
  ***************************************************************************/
 
 #include <sstream>
-#include <ctime>
+#include <iomanip>
 
 #include <wx/wx.h>
 
@@ -202,11 +202,13 @@ std::string Race::SetPlaceholders(const std::string& input) const {
       {"$$username", "Ibis"},
       {"$$racenumber", ""},
       {"$$token", ""},
-      {"$$boaturl", "/webclient/boat.xml"}};
+      {"$$boaturl", "/webclient/boat.xml"},
+      {"$$weatherurl", ""}};
 
   placeholders["$$racenumber"] = m_id;
   placeholders["$$token"] = m_sol_token;
   placeholders["$$boaturl"] = m_url;
+  placeholders["$$weatherurl"] = m_weather_url;
 
   std::string result = input;
 
@@ -481,7 +483,25 @@ bool Race::DownloadBoatUrl() {
   return true;
 }
 
-const std::vector<std::shared_ptr<PlugIn_Waypoint>>& Race::GetWaypoints() const { return m_waypoints; }
+bool Race::DownloadWeatherUrl() {
+  pugi::xml_document race_doc;
+  auto status = race_doc.load_string(GetRaceInfo());
+  if (!status) {
+    m_errors.emplace_back("Could not parse race file: %s",
+                          status.description());
+    return false;
+  }
+
+  pugi::xml_node node_url = race_doc.select_node("/race/weatherurl").node();
+  m_weather_url = node_url.first_child().value();
+
+  return true;
+}
+
+const std::vector<std::shared_ptr<PlugIn_Waypoint>>& Race::GetWaypoints()
+    const {
+  return m_waypoints;
+}
 
 const std::list<Dc>& Race::GetDcs() const { return m_dcs; }
 
@@ -511,13 +531,6 @@ std::tuple<double, double, double> Race::GetBoatPosition() {
     return {};
   }
 
-  pugi::xml_node node = boatdata_doc.select_node("/data/boat/lat").node();
-  double latitude = std::stod(node.first_child().value());
-  node = boatdata_doc.select_node("/data/boat/lon").node();
-  double longitude = std::stod(node.first_child().value());
-  node = boatdata_doc.select_node("/data/boat/cog").node();
-  double course = std::stod(node.first_child().value()) / M_PI * 180.0;
-
   /**
    * The downloaded xml file has the following information
    * <data>
@@ -544,7 +557,94 @@ std::tuple<double, double, double> Race::GetBoatPosition() {
    * </data>
    */
 
-    return {latitude, longitude, course};
+  pugi::xml_node node = boatdata_doc.select_node("/data/boat/lat").node();
+  double latitude = std::stod(node.first_child().value());
+  node = boatdata_doc.select_node("/data/boat/lon").node();
+  double longitude = std::stod(node.first_child().value());
+  node = boatdata_doc.select_node("/data/boat/cog").node();
+  double course = std::stod(node.first_child().value()) / M_PI * 180.0;
+
+  return {latitude, longitude, course};
+}
+
+std::time_t Race::GetWeatherData() {
+  Login();
+
+  if (m_sol_token.empty()) {
+    m_errors.emplace_back("Not logged into race " + m_id +
+                          ", did you register?");
+    return {};
+  }
+
+  wxFileName weatherdata_fn =
+      m_sailonline_pi.GetDataDir(wxString::Format("Race_%s", m_id.c_str()));
+  weatherdata_fn.SetFullName(
+      wxString::Format("weatherinfo_%s.xml", m_id.c_str()));
+  std::string weatherdata = GetUrl(SolApi::kSolWeatherDataUrl, weatherdata_fn,
+                                   "Finding weather data");
+  if (weatherdata.empty()) {
+    m_errors.emplace_back("No weather data found at " +
+                          SetPlaceholders(SolApi::kSolWeatherDataUrl));
+    return {};
+  }
+
+  pugi::xml_document weatherdata_doc;
+  auto status = weatherdata_doc.load_string(weatherdata.c_str());
+  if (!status) {
+    m_errors.emplace_back("Could not parse weather data file: %s",
+                          status.description());
+    return {};
+  }
+
+  /**
+   * The downloaded xml file has the following information
+   * <weatherinfo>
+   *   <id>96</id>
+   *   <last_updated>2026/02/22 10:22:10</last_updated>
+   *   <url>http://sailonline.org/site_media/weather/xml/weather_96_global_gfs_20260222_1022.xml</url>
+   * </weatherinfo>
+   */
+
+  pugi::xml_node node = weatherdata_doc.select_node("/weatherinfo/url").node();
+  std::string grib_url = node.first_child().value();
+  std::string grib_name = grib_url.substr(grib_url.find_last_of("/") + 1);
+  node = weatherdata_doc.select_node("/weatherinfo/last_updated").node();
+  struct std::tm tm;
+  std::istringstream ss(node.first_child().value());
+  ss >> std::get_time(&tm, "%Y/%M/%D %H:%M:%S");
+
+  wxFileName grib_fn = m_sailonline_pi.GetDataDir(
+      wxString::Format("Race_%s/Weather", m_id.c_str()));
+  grib_fn.SetFullName(grib_name);
+  std::string gribdata = GetUrl(grib_url, grib_fn, "Finding grib data");
+  if (gribdata.empty()) return {};
+
+  /**
+   * The downloaded xml file has the following information:
+   * <weathersystem
+   *    id="96"
+   *    issue_time="2026/02/22 06:00:00"
+   *    last_updated="2026/02/22 10:22:10"
+   *    lon_min="-180"
+   *    lon_max="22"
+   *    lat_min="40"
+   *    lat_max="88"
+   *    lon_n_points="102"
+   *    lon_increment="2"
+   *    lat_n_points="97"
+   *    lat_increment="0.5">
+   *   <frames>
+   *     <frame target_time="2026/02/22 09:00:00">
+   *       <U>5.346 4.846 ... -4.734;</U/>
+   *       <V>-7.146 -4.946 ... 2.374;<V>
+   *     </frame>
+   *     ...
+   *   </frames>
+   * </weathersystem>
+   */
+
+  // Convert xml to grib format
+  return mktime(&tm);
 }
 
 std::pair<double, double> Race::GetWindData(const wxDateTime& t, double lat,

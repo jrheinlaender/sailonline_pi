@@ -321,6 +321,17 @@ void SailonlineUi::ShowPage(const int page) {
             + ",A")
         + "\r\n");
       PushNMEABuffer(addCheckSum("IIHDT," + std::to_string(course) + "," + "T") + "\r\n");
+
+      if (!m_prace->DownloadWeatherUrl()) {
+        wxString errors;
+        for (const auto& e : m_prace->GetErrors())
+          errors = errors.append(e).append('\n');
+        wxLogMessage(errors);
+        OCPNMessageBox_PlugIn(this, errors,
+                              "Error downloading weather data URL", wxOK);
+        return;
+      }
+
     }
   }
 }

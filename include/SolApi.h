@@ -42,6 +42,8 @@ const static std::string kSolRaceXmlUrl =
     "auth_raceinfo_$$racenumber.xml?token=$$token";
 const static std::string kSolBoatDataUrl =
     "https://www.sailonline.org$$boaturl?token=$$token";
+const static std::string kSolWeatherDataUrl =
+    "https://www.sailonline.org$$weatherurl?token=$$token";
 };  // namespace SolApi
 
 #endif

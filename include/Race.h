@@ -23,6 +23,7 @@
 #include <list>
 #include <string>
 #include <memory>
+#include <ctime>
 
 #include <wx/datetime.h>
 #include <wx/filename.h>
@@ -64,6 +65,7 @@ public:
   std::string m_message;
   std::string m_start;
   std::string m_url; // Where to find boat position etc.
+  std::string m_weather_url;
   std::string m_polarfile;
 
   /// Return error messages and clear the error store
@@ -78,6 +80,9 @@ public:
   /// Extract URL of boat data XML from race XML
   bool DownloadBoatUrl();
 
+  /// Extract URL of current weather data from race XML
+  bool DownloadWeatherUrl();
+
   const std::vector<std::shared_ptr<PlugIn_Waypoint>>& GetWaypoints() const;
 
   const std::list<Dc>& GetDcs() const;
@@ -85,6 +90,9 @@ public:
 
   /// Get latitude, longitude and course of boat
   std::tuple<double, double, double> GetBoatPosition();
+
+  /// Get weather data and save it to a file. Return start time of forecast
+  std::time_t GetWeatherData();
 
   /// Enrich the DC list with calculated values for diagnostic purposes
   void EnrichDcs();
