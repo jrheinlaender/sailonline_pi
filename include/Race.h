@@ -25,6 +25,7 @@
 #include <memory>
 
 #include <wx/datetime.h>
+#include <wx/filename.h>
 
 typedef void CURL;
 class PlugIn_Waypoint;
@@ -62,7 +63,7 @@ public:
   std::string m_description;
   std::string m_message;
   std::string m_start;
-  std::string m_url;
+  std::string m_url; // Where to find boat position etc.
   std::string m_polarfile;
 
   /// Return error messages and clear the error store
@@ -126,6 +127,9 @@ private:
 
   /// Convenience funtion to shorten curl_easy_perform calls
   bool CallCurl(CURL* curl);
+
+  /// Download data from a URL using the OCPN_downloadFile
+  std::string GetUrl(const std::string& url, const wxFileName& target, const std::string& message);
 
   /// Convencience function for placeholders in URLs
   std::string SetPlaceholders(const std::string& input) const;

@@ -158,7 +158,7 @@ wxString sailonline_pi::GetLongDescription() {
 
 int sailonline_pi::GetToolbarToolCount(void) { return 1; }
 
-void sailonline_pi::ShowPreferencesDialog(wxWindow* parent) {}
+void sailonline_pi::ShowPreferencesDialog(wxWindow*) {}
 
 void sailonline_pi::NewSol() {
   if (m_pui) return;
@@ -201,7 +201,7 @@ bool sailonline_pi::SaveConfig() {
   return true;
 }
 
-void sailonline_pi::OnToolbarToolCallback(int id) {
+void sailonline_pi::OnToolbarToolCallback(int) {
   if (!m_psailonline) NewSol();
 
   m_pui->Show(!m_pui->IsShown());

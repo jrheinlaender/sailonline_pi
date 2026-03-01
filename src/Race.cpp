@@ -36,10 +36,10 @@ Race::Race(sailonline_pi& plugin) : m_sailonline_pi(plugin) {}
 Race::~Race() {}
 
 namespace {
-    // Constants local to this file
-    /// Use this to approximate zero TWA
-    static constexpr double kTwaZero = 1E-3;
-}
+// Constants local to this file
+/// Use this to approximate zero TWA
+static constexpr double kTwaZero = 1E-3;
+}  // namespace
 
 namespace {
 // TODO duplicate code with WR plugin
@@ -300,9 +300,9 @@ wxString Race::GetRaceInfo() {
     Login();
 
     if (m_sol_token.empty()) {
-        m_errors.emplace_back("Not logged into race " + m_id +
+      m_errors.emplace_back("Not logged into race " + m_id +
                             ", did you register?");
-        return {};
+      return {};
     }
 
     wxLogMessage("Downloading auth_raceinfo_%s.xml", m_id);

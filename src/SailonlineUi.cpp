@@ -211,7 +211,6 @@ std::string DegreesToString(const double lat_lon, const unsigned digits, const c
   decimals = std::modf(std::fabs(lat_lon), &degrees);
 
   wxString format = wxString::Format("%%0%i.0f", digits);
-  std::cout << "degrees=" << degrees << ", decimals=" << decimals << ", format=" << format << std::endl;
   wxString result = wxString::Format(format, degrees)
         + wxString::Format("%09.6f", decimals * 60.0)
         + "," + (lat_lon >= 0 ? pos : neg) + ",";
@@ -224,8 +223,6 @@ std::string addCheckSum(const std::string& sentence) {
   for (size_t i = 0; i < sentence.size(); i++) XOR ^= (unsigned char)sentence[i];
   std::stringstream tmpss;
   tmpss << std::hex << (int)XOR;
-
-  std::cout << "CHECKSUM on " << sentence << std::endl;
   return "$" + sentence + "*" + tmpss.str();
 }
 }
@@ -335,7 +332,6 @@ void SailonlineUi::OnRaceSelected(wxListEvent& event) {
       m_ppanel->m_pracelist->GetItemText(idx, 0).ToStdString();
   if (racenumber.empty()) return;
   // TODO Error message
-  std::cout << "Race selected: " << racenumber << std::endl;
   m_prace = GetSol()->GetRace(racenumber);
   if (m_prace == nullptr) return;
   // TODO Clear panel if nothing is found?
