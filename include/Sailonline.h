@@ -20,8 +20,6 @@
 #ifndef _SAILONLINE_H_
 #define _SAILONLINE_H_
 
-#include <wx/event.h>
-
 #include <ocpn_plugin.h>
 
 class sailonline_pi;
@@ -30,7 +28,7 @@ class Race;
 /**
  * Class that handles the Sailonline data.
  */
-class Sailonline : wxEvtHandler {
+class Sailonline {
 public:
   Sailonline(sailonline_pi& plugin);
   ~Sailonline();
@@ -49,14 +47,6 @@ private:
   std::vector<std::string> m_errors;
 
   std::unordered_map<std::string, std::shared_ptr<Race>> m_races;
-
-  // Downloading
-  void OnDownloadEvent(OCPN_downloadEvent& ev);
-  bool m_connected;  // Download event is connected
-  long m_download_handle;
-  bool m_downloading;  // Flag to discover end of download
-  bool m_download_success;
-  void CleanupDownload();
 };
 
 #endif

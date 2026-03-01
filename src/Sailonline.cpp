@@ -44,29 +44,14 @@ Sailonline::Sailonline(sailonline_pi& plugin) : m_sailonline_pi(plugin) {
   wxLogMessage("Downloading racelist to %s", download_target.GetFullPath());
 
   // Download racelist
-  Connect(wxEVT_DOWNLOAD_EVENT,
-          (wxObjectEventFunction)(wxEventFunction)&Sailonline::OnDownloadEvent);
-
-  m_connected = true;
-  m_downloading = true;
-  m_download_success = true;
-  m_download_handle = 0;
-  if (!(OCPN_downloadFileBackground(SolApi::kUrlRacelist,
-                                    download_target.GetFullPath(), this,
-                                    &m_download_handle) == OCPN_DL_STARTED)) {
-    m_errors.emplace_back("Failed to initiate download of racelist " +
-                          SolApi::kUrlRacelist);
-    return;
-  }
-
-  while (m_downloading) {
-    wxTheApp->ProcessPendingEvents();
-    wxLogMessage("Waiting for download...");
-    wxYield();
-    wxMilliSleep(1000);
-  }
-  if (!m_download_success) {
-    m_errors.emplace_back("Failed to download racelist " +
+  if (!(OCPN_downloadFile(
+      SolApi::kUrlRacelist, download_target.GetFullPath(),
+      "Downloading", "Fetching list of races", wxBitmap(),
+      m_sailonline_pi.GetParentWindow(),
+      OCPN_DLDS_URL | OCPN_DLDS_ELAPSED_TIME | OCPN_DLDS_SPEED |
+      OCPN_DLDS_CAN_ABORT | OCPN_DLDS_AUTO_CLOSE, 30)
+        == OCPN_DL_NO_ERROR)) {
+    m_errors.emplace_back("Failed to download list of races from " +
                           SolApi::kUrlRacelist);
     return;
   }
@@ -118,8 +103,6 @@ Sailonline::Sailonline(sailonline_pi& plugin) : m_sailonline_pi(plugin) {
 }
 
 Sailonline::~Sailonline() {
-  CleanupDownload();
-
 }
 
 std::shared_ptr<Race> Sailonline::GetRace(const std::string& racenumber) const {
@@ -133,32 +116,4 @@ std::vector<std::string> Sailonline::GetErrors() {
   std::vector<std::string> result;
   std::swap(m_errors, result);
   return result;
-}
-
-
-void Sailonline::CleanupDownload() {
-  if (m_downloading) OCPN_cancelDownloadFileBackground(m_download_handle);
-
-  if (m_connected)
-    Disconnect(
-        wxEVT_DOWNLOAD_EVENT,
-        (wxObjectEventFunction)(wxEventFunction)&Sailonline::OnDownloadEvent);
-
-  m_connected = false;
-  m_downloading = false;
-  m_download_handle = 0;
-  // Note: m_download_success is set in OnDownloadEvent()
-}
-
-void Sailonline::OnDownloadEvent(OCPN_downloadEvent& ev) {
-  switch (ev.getDLEventCondition()) {
-    case OCPN_DL_EVENT_TYPE_END:
-      m_download_success = (ev.getDLEventStatus() == OCPN_DL_NO_ERROR);
-      CleanupDownload();
-      wxYieldIfNeeded();
-      break;
-
-    default:
-      break;
-  }
 }
