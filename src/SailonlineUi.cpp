@@ -115,7 +115,7 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
   m_ppanel->m_pwaypointlist->InsertColumn(1, _("Name"));
 
   m_ppanel->m_pdclist->ClearAll();
-  m_ppanel->m_pdclist->InsertColumn(0, _("Time"));
+  m_ppanel->m_pdclist->InsertColumn(0, _("Time (UTC)"));
   m_ppanel->m_pdclist->InsertColumn(1, _("Type"));
   m_ppanel->m_pdclist->InsertColumn(2, _("Course"));
   m_ppanel->m_pdclist->InsertColumn(3, _("TWA"));
@@ -210,7 +210,7 @@ std::string DegreesToString(const double lat_lon, const unsigned digits, const c
   double degrees, decimals;
   decimals = std::modf(std::fabs(lat_lon), &degrees);
 
-  wxString format = wxString::Format("%%0%i.0f", digits);
+  wxString format = wxString::Format("%%0%u.0f", digits);
   wxString result = wxString::Format(format, degrees)
         + wxString::Format("%09.6f", decimals * 60.0)
         + "," + (lat_lon >= 0 ? pos : neg) + ",";
@@ -252,7 +252,7 @@ void SailonlineUi::ShowPage(const int page) {
         wxString errors;
         for (const auto& e : m_prace->GetErrors())
           errors = errors.append(e).append('\n');
-        wxLogMessage(errors);
+        wxLogMessage(errors.c_str());
         OCPNMessageBox_PlugIn(this, errors,
                               "Error downloading race information", wxOK);
         return;
@@ -288,7 +288,7 @@ void SailonlineUi::ShowPage(const int page) {
         wxString errors;
         for (const auto& e : m_prace->GetErrors())
           errors = errors.append(e).append('\n');
-        wxLogMessage(errors);
+        wxLogMessage(errors.c_str());
         OCPNMessageBox_PlugIn(this, errors,
                               "Error downloading boat position URL", wxOK);
         return;
@@ -300,7 +300,7 @@ void SailonlineUi::ShowPage(const int page) {
         wxString errors;
         for (const auto& e : m_prace->GetErrors())
           errors = errors.append(e).append('\n');
-        wxLogMessage(errors);
+        wxLogMessage(errors.c_str());
         OCPNMessageBox_PlugIn(this, errors,
                               "Error downloading boat position information", wxOK);
         return;
@@ -317,7 +317,7 @@ void SailonlineUi::ShowPage(const int page) {
             "IIGLL,"
             + DegreesToString(latitude, 2, 'N', 'S')
             + DegreesToString(longitude, 3, 'E', 'W')
-            + wxDateTime::Now().Format("%H%M%S").ToStdString()
+            + wxDateTime::Now().Format("%H%M%S", wxDateTime::UTC).ToStdString()
             + ",A")
         + "\r\n");
       PushNMEABuffer(addCheckSum("IIHDT," + std::to_string(course) + "," + "T") + "\r\n");
@@ -326,7 +326,7 @@ void SailonlineUi::ShowPage(const int page) {
         wxString errors;
         for (const auto& e : m_prace->GetErrors())
           errors = errors.append(e).append('\n');
-        wxLogMessage(errors);
+        wxLogMessage(errors.c_str());
         OCPNMessageBox_PlugIn(this, errors,
                               "Error downloading weather data URL", wxOK);
         return;
@@ -381,7 +381,7 @@ void SailonlineUi::FillDcList() {
     long index = m_ppanel->m_pdclist->InsertItem(
         m_ppanel->m_pdclist->GetItemCount(), item);
     m_ppanel->m_pdclist->SetItem(index, 0,
-                                 dc->m_timestamp.Format("%Y/%m/%d %H:%M:%S"));
+                                 dc->m_timestamp.Format("%Y/%m/%d %H:%M:%S", wxDateTime::UTC));
     m_ppanel->m_pdclist->SetItem(index, 1, dc->m_is_twa ? "twa" : "cc");
     m_ppanel->m_pdclist->SetItem(index, 2,
                                  wxString::Format("%03.3f", dc->m_course));
@@ -395,9 +395,9 @@ void SailonlineUi::FillDcList() {
                                        ? dc->m_opt_upwind
                                        : dc->m_opt_downwind));
     m_ppanel->m_pdclist->SetItem(
-        index, 6, wxString::Format("%03.3f", dc->m_perf_begin * 100));
+        index, 6, wxString::Format("%03.3f", dc->m_perf_begin * 100.0));
     m_ppanel->m_pdclist->SetItem(
-        index, 7, wxString::Format("%03.3f", dc->m_perf_end * 100));
+        index, 7, wxString::Format("%03.3f", dc->m_perf_end * 100.0));
 
     previous_dc = dc;
   }
@@ -432,7 +432,7 @@ void SailonlineUi::OnDcFromTrack(wxCommandEvent&) {
       DistanceBearingMercator_Plugin(wp->m_lat, wp->m_lon, first_wp->m_lat,
                                      first_wp->m_lon, &bearing, &distance);
 
-      dcs.emplace_back(Dc{first_wp->m_CreateTime, first_wp->m_lat,
+      dcs.emplace_back(Dc{first_wp->m_CreateTime.FromUTC(), first_wp->m_lat,
                           first_wp->m_lon, bearing, false});
 
       first_waypoint = waypoint;
@@ -464,7 +464,7 @@ void SailonlineUi::OnCopyDcs(wxCommandEvent&) {
   const auto& dcs = m_prace->GetDcs();
 
   for (const auto& dc : dcs) {
-    wxString timestamp = dc.m_timestamp.Format("%Y/%m/%d %H:%M:%S");
+    wxString timestamp = dc.m_timestamp.Format("%Y/%m/%d %H:%M:%S", wxDateTime::UTC);
     wxString coursetype = (dc.m_is_twa ? "twa" : "cc");
     wxString course =
         wxString::Format("%03.3f", dc.m_is_twa ? dc.m_twa : dc.m_course);

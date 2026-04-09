@@ -176,7 +176,7 @@ std::string Race::GetUrl(const std::string& url, const wxFileName& target,
             SetPlaceholders(url), target.GetFullPath(), "Downloading", message,
             wxBitmap(), m_sailonline_pi.GetParentWindow(),
             OCPN_DLDS_URL | OCPN_DLDS_ELAPSED_TIME | OCPN_DLDS_SPEED |
-                OCPN_DLDS_CAN_ABORT /*| OCPN_DLDS_AUTO_CLOSE*/,
+                OCPN_DLDS_CAN_ABORT | OCPN_DLDS_AUTO_CLOSE,
             30) == OCPN_DL_NO_ERROR)) {
     m_errors.emplace_back(message + "\nFailed to download from " + url);
     return {};
@@ -231,7 +231,7 @@ bool Race::Login() {
   // accessible
   // Note: OCPN_postDataHttp() does not handle cookies
   // Therefore we must use another method
-  wxLogMessage("Logging into race %s", m_id);
+  wxLogMessage("Logging into race %s", m_id.c_str());
   CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
   if (result != CURLE_OK) {
     m_errors.emplace_back("Curl error: " + std::to_string(result));
@@ -285,7 +285,7 @@ bool Race::Login() {
 
   m_sol_token = pagedata.substr(pos + 31, 32);
   wxLogMessage("Successfully logged in with token '%s' for race %s",
-               m_sol_token, m_id);
+               m_sol_token.c_str(), m_id.c_str());
 
   curl_easy_cleanup(curl);
   return true;
@@ -307,11 +307,11 @@ wxString Race::GetRaceInfo() {
       return {};
     }
 
-    wxLogMessage("Downloading auth_raceinfo_%s.xml", m_id);
+    wxLogMessage("Downloading auth_raceinfo_%s.xml", m_id.c_str());
     result = GetUrl(SolApi::kSolRaceXmlUrl, raceinfo, "Finding race token");
     wxLogMessage("Cached raceinfo to auth_raceinfo_%s.xml", m_id.c_str());
   } else {
-    wxLogMessage("Reading cached auth_raceinfo_%s.xml", m_id);
+    wxLogMessage("Reading cached auth_raceinfo_%s.xml", m_id.c_str());
     wxFile raceinfo_file(raceinfo.GetFullPath(), wxFile::read);
     raceinfo_file.ReadAll(&result);
     raceinfo_file.Close();
@@ -374,7 +374,7 @@ bool Race::DownloadPolar() {
   wxFileName download_target = m_sailonline_pi.GetDataDir("Polar");
   download_target.SetFullName(
       wxString::Format("SOL_%s_polar.csv", polar_name.c_str()));
-  wxLogMessage("Writing boat polar to %s", download_target.GetFullPath());
+  wxLogMessage("Writing boat polar to %s", download_target.GetFullPath().c_str());
   wxFile polar_file(download_target.GetFullPath(), wxFile::write);
   if (polar_file.Error()) {
     m_errors.emplace_back("Could not write to polar file");
@@ -417,7 +417,7 @@ bool Race::DownloadPolar() {
 
   polar_file.Close();
   m_polarfile = download_target.GetFullName();
-  wxLogMessage("Saved polar data to %s", download_target.GetFullPath());
+  wxLogMessage("Saved polar data to %s", download_target.GetFullPath().c_str());
   return true;
 }
 
@@ -443,7 +443,7 @@ bool Race::DownloadWaypoints() {
            node_wp_child != nullptr;
            node_wp_child = node_wp_child.next_sibling()) {
         if (strcmp(node_wp_child.name(), "order") == 0)
-          wp->m_GUID = wxString::Format("SOL_%s_%s", m_id,
+          wp->m_GUID = wxString::Format("SOL_%s_%s", m_id.c_str(),
                                         node_wp_child.first_child().value());
         else if (strcmp(node_wp_child.name(), "name") == 0)
           wp->m_MarkName = wxString(node_wp_child.first_child().value()).Trim();
@@ -675,7 +675,7 @@ std::pair<double, double> Race::GetWindData(const wxDateTime& t, double lat,
     return {reply["WIND SPEED"].asDouble() * 3600 / 1852,
             reply["WIND DIR"].asDouble()};
 
-  wxLogMessage("Invalid wind data: %s", reply["Error"].asString());
+  wxLogMessage("Invalid wind data: %s", reply["Error"].asString().c_str());
   return {-1.0, -1.0};
 }
 
@@ -702,7 +702,7 @@ double Race::GetSpeedThroughWater(double tws, double twa) const {
   if (reply != Json::nullValue && reply.isMember("BOAT SPEED"))
     return reply["BOAT SPEED"].asDouble();
 
-  wxLogMessage("Invalid speed through water: %s", reply["Error"].asString());
+  wxLogMessage("Invalid speed through water: %s", reply["Error"].asString().c_str());
   return -1.0;
 }
 
@@ -727,7 +727,7 @@ std::pair<double, double> Race::GetBoatOptimalAngles(double tws) const {
       reply.isMember("OPT DOWN"))
     return {reply["OPT UP"].asDouble(), reply["OPT DOWN"].asDouble()};
 
-  wxLogMessage("Invalid optimal angles: %s", reply["Error"].asString());
+  wxLogMessage("Invalid optimal angles: %s", reply["Error"].asString().c_str());
   return {-1.0, -1.0};
 }
 

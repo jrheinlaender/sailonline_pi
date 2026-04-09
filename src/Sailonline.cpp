@@ -41,7 +41,7 @@ Sailonline::Sailonline(sailonline_pi& plugin) : m_sailonline_pi(plugin) {
   // Build target filename
   wxFileName download_target = m_sailonline_pi.GetDataDir();
   download_target.SetFullName("racelist.xml");
-  wxLogMessage("Downloading racelist to %s", download_target.GetFullPath());
+  wxLogMessage("Downloading racelist to %s", download_target.GetFullPath().c_str());
 
   // Download racelist
   if (!(OCPN_downloadFile(
