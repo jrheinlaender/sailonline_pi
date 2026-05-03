@@ -1006,9 +1006,8 @@ void Race::MakeTrack() const {
   if (m_dcs.empty()) return;
 
   PlugIn_Track track;
-  // TODO Put timestamp of the route calculation here
-  struct tm* timeinfo(gmtime(nullptr));  // Current UTC timestamp
-  track.m_NameString = "SOL " + m_id + std::asctime(timeinfo);
+  track.m_NameString = "SOL " + m_id + " " +
+                       m_dcs.front().m_timestamp.Format("%x %H:%M", wxDateTime::UTC);
   track.m_StartString = "Start";
   track.m_EndString = "End";
   track.m_GUID = GetNewGUID();
@@ -1025,79 +1024,65 @@ void Race::MakeTrack() const {
     // memory
     PlugIn_Waypoint* pwaypoint = new PlugIn_Waypoint(
         current_lat, current_lon, "dot", _("SOL route point"), wxEmptyString);
-    pwaypoint->m_CreateTime = dc->m_timestamp;
+    // TODO Remove the ToUTC() as soon as bug #621 is fixed in main program
+    pwaypoint->m_CreateTime = dc->m_timestamp.ToUTC();
     track.pWaypointList->Append(pwaypoint);
-
-    auto [tws, twd] = GetWindData(dc->m_timestamp, current_lat, current_lon);
-    double twa;
-    double course;
-    if (dc->m_is_twa) {
-      twa = dc->m_twa;
-      course = twd - twa;
-    } else {
-      twa = twd - dc->m_course;  // positive sign: starboard tack
-      course = dc->m_course;
-    }
-    if (twa < -180.0)
-      twa += 360.0;
-    else if (twa > 180.0)
-      twa -= 360.0;
-    double theoretical_stw = GetSpeedThroughWater(tws, twa);
-
-    // Performance loss for initial course change of the Dc
-    performance =
-        get_performance(performance, theoretical_stw, previous_twa, twa);
 
     auto next_dc = dc;
     ++next_dc;
     double time_seconds =
         (next_dc != m_dcs.end())
             ? (next_dc->m_timestamp - dc->m_timestamp).GetSeconds().ToDouble()
-            : 3600.0;  // Go on for one more hour after last Dc
+            : 30.0; // TODO use jump length
 
     // Note: Waypoints are only created at DC timestamps, not at every jump
+    wxDateTime current_time = dc->m_timestamp;
     double jump = std::min(time_seconds, 30.0);
-    double current_time;
-    double current_stw = theoretical_stw * performance;
-    double total_dist = 0.0;
+    wxTimeSpan jump_span(0, 0, jump);
 
-    for (current_time = jump; current_time <= time_seconds;
-         current_time += jump) {
-      // TODO TODO New wind and theoretical speed!
+    for (; current_time < next_dc->m_timestamp.Add(jump_span); current_time.Add(jump_span)) {
+        // Handle last, fractional jump
+        if (current_time > next_dc->m_timestamp) {
+            jump = (current_time - next_dc->m_timestamp).GetSeconds().ToDouble();
+            current_time = next_dc->m_timestamp;
+        }
 
-      // The loop always calculates the performance and distance at current_time
-      if (performance < 1.0) {
-        performance = get_recovery_step(performance, jump, current_stw);
-        current_stw = theoretical_stw * performance;
-      }
+        // Get course and twa
+        auto [tws, twd] = GetWindData(current_time, current_lat, current_lon);
+        double twa;
+        double course;
+        if (dc->m_is_twa) {
+            twa = dc->m_twa;
+            course = twd - twa;
+        } else {
+            twa = twd - dc->m_course;  // positive sign: starboard tack
+            if (twa < -180.0)
+                twa += 360.0;
+            else if (twa > 180.0)
+                twa -= 360.0;
+            course = dc->m_course;
+        }
 
-      // TODO It is not clear whether dist is calculated with old or new
-      // performance
-      double dist = current_stw * jump / 3600.0;
-      if (dc->m_is_twa)
+        // Get theoretical speed, performance and current speed
+        double theoretical_stw = GetSpeedThroughWater(tws, twa);
+        performance =
+            get_performance(performance, theoretical_stw, previous_twa, twa);
+        double current_stw = theoretical_stw * performance;
+
+        // Performance recovery
+        if (performance < 1.0) {
+            performance = get_recovery_step(performance, jump, current_stw);
+            current_stw = theoretical_stw * performance;
+        }
+
+        double dist = current_stw * jump / 3600.0;
         PositionBearingDistanceMercator_Plugin(
             current_lat, current_lon, course, dist, &current_lat, &current_lon);
-
-      total_dist += dist;
     }
 
-    // Remaining fractional jump
-    double remainder = time_seconds - current_time;
-    if (remainder > 0.0) {
-      performance =
-          std::min(1.0, get_recovery_step(performance, remainder, current_stw));
-      double dist = theoretical_stw * performance * remainder / 3600.0;
-      if (dc->m_is_twa)
-        PositionBearingDistanceMercator_Plugin(
-            current_lat, current_lon, course, dist, &current_lat, &current_lon);
-
-      total_dist += dist;
-    }
-
-    if (!dc->m_is_twa)
-      PositionBearingDistanceMercator_Plugin(current_lat, current_lon,
-                                             dc->m_course, total_dist,
-                                             &current_lat, &current_lon);
+    double temp;
+    double diff_dist;
+    DistanceBearingMercator_Plugin(current_lat, current_lon, next_dc->m_lat_start, next_dc->m_lon_start, &temp, &diff_dist);
   }
 
   AddPlugInTrack(&track);  // Note: Contents are copied
