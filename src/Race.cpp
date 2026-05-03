@@ -647,14 +647,13 @@ std::time_t Race::GetWeatherData() {
   return mktime(&tm);
 }
 
-std::pair<double, double> Race::GetWindData(const wxDateTime& t, double lat,
+std::pair<double, double> Race::GetWindData(const wxDateTime& time, double lat,
                                             double lon) const {
   Json::Value v;
   Json::FastWriter writer;
-  wxDateTime time = t.FromUTC();
   if (!time.IsValid()) return {-1.0, -1.0};
 
-  v["Day"] = time.GetDay();
+  v["Day"] = time.GetDay(); // Converts to local time
   v["Month"] = time.GetMonth();
   v["Year"] = time.GetYear();
   v["Hour"] = time.GetHour();
