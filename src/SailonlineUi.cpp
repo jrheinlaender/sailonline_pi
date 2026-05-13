@@ -108,7 +108,7 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
   m_ppanel->m_notebook->Connect(
       wxEVT_NOTEBOOK_PAGE_CHANGING,
       wxBookCtrlEventHandler(SailonlineUi::OnPageChanged), nullptr, this);
-  m_ppanel->m_notebook->SetSelection(0);  // Show first tab
+  m_ppanel->m_notebook->SetSelection(RaceDescription);  // Show first tab
 
   m_ppanel->m_pwaypointlist->ClearAll();
   m_ppanel->m_pwaypointlist->InsertColumn(0, _("Id"));
@@ -160,6 +160,10 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
 
 SailonlineUi::~SailonlineUi() {
   std::cout << "Destructor of SailonlineUi" << std::endl;
+
+  m_ppanel->m_notebook->Disconnect(
+      wxEVT_NOTEBOOK_PAGE_CHANGING,
+      wxBookCtrlEventHandler(SailonlineUi::OnPageChanged), nullptr, this);
 
   m_ppanel->m_pbutton_downloadpolar->Disconnect(
       wxEVT_COMMAND_BUTTON_CLICKED,
@@ -224,7 +228,7 @@ void SailonlineUi::ShowPage(const int page) {
   if (m_prace == nullptr) return;
 
   switch (page) {
-    case 0:  // Race description
+    case RaceDescription:
     {
       // Fill first tab with information about the race
       m_ppanel->SetLabel(m_prace->m_id);
@@ -238,7 +242,7 @@ void SailonlineUi::ShowPage(const int page) {
 
       break;
     }
-    case 1:  // Race information
+    case RaceInformation:
     {
       if (!m_prace->DownloadPolar() || !m_prace->DownloadWaypoints()) {
         wxString errors;
@@ -266,7 +270,7 @@ void SailonlineUi::ShowPage(const int page) {
 
       break;
     }
-    case 2:  // DC list
+    case RaceDcList:
     {
       m_prace->DownloadWaypoints();
       // m_prace->DownloadDcs();
@@ -274,7 +278,7 @@ void SailonlineUi::ShowPage(const int page) {
 
       break;
     }
-    case 3: // Routing
+    case RaceRouting:
     {
       if (!m_prace->DownloadBoatUrl()) {
         wxString errors;
@@ -315,7 +319,7 @@ void SailonlineUi::OnRaceSelected(wxListEvent& event) {
   // TODO Clear panel if nothing is found?
 
   // Show race description
-  m_ppanel->m_notebook->SetSelection(0);
+  m_ppanel->m_notebook->SetSelection(RaceDescription);
 }
 
 void SailonlineUi::OnPageChanged(wxBookCtrlEvent& event) {
@@ -329,11 +333,13 @@ void SailonlineUi::OnPageChanged(wxBookCtrlEvent& event) {
 }
 
 void SailonlineUi::OnStartStopTracking(wxCommandEvent&) {
-  if (m_tMoveBoat.IsRunning())
+  if (m_tMoveBoat.IsRunning()) {
     m_tMoveBoat.Stop();
-  else {
+    m_ppanel->m_pbutton_tracking->SetLabel(_("Start tracking"));
+  } else {
     m_tMoveBoat.StartOnce();
     m_tMoveBoat.Start(5000);
+    m_ppanel->m_pbutton_tracking->SetLabel(_("Stop tracking"));
   }
 }
 
