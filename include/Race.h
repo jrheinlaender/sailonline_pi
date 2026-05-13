@@ -88,8 +88,8 @@ public:
   const std::list<Dc>& GetDcs() const;
   std::list<Dc>& GetDcs();
 
-  /// Get latitude, longitude and course of boat
-  std::tuple<double, double, double> GetBoatPosition();
+  /// Get latitude, longitude, course and speed over ground of boat
+  std::tuple<double, double, double, double> GetBoatData();
 
   /// Get weather data and save it to a file. Return start time of forecast
   std::time_t GetWeatherData();
@@ -127,8 +127,16 @@ private:
   // (degrees)
   std::pair<double, double> GetWindData(const wxDateTime& t, double lat,
                                         double lon) const;
-  // Request boat data: Boat speed (knots)
+
+  /**
+   * Request boat data: Boat speed
+   * @param tws True wind speed (knots)
+   * @param twa True wind angle
+   *
+   * @returns Boat speed through water (knots)
+   */
   double GetSpeedThroughWater(double tws, double twa) const;
+
   // Request boat data: optimal upwind angle (degrees), optimal downwind angle
   // (degrees)
   std::pair<double, double> GetBoatOptimalAngles(double tws) const;

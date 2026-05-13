@@ -48,6 +48,11 @@ private:
 
   std::vector<std::string> m_init_errors;
 
+  /// Timer to move the boat by NMEA
+  wxTimer m_tMoveBoat;
+  /// Interval to query SOL for boat data
+  int m_interval_boatquery;
+
   // Show data on selected notebook page
   void ShowPage(const int page);
 
@@ -58,13 +63,15 @@ private:
   void OnRaceSelected(wxListEvent& event);
   void OnPageChanged(wxBookCtrlEvent& event);
   void OnPolarDownload(wxCommandEvent& event);
-  void OnUpdatePosition(wxCommandEvent& event);
+  void OnStartStopTracking(wxCommandEvent& event);
+  void OnUpdateInterval(wxSpinEvent& event);
   void OnDcDownload(wxCommandEvent& event);
   void OnDcUpload(wxCommandEvent& event);
   void OnDcFromTrack(wxCommandEvent& event);
   void OnDcToTrack(wxCommandEvent& event);
   void OnDcModify(wxCommandEvent& event);
   void OnCopyDcs(wxCommandEvent& event);
+  void OnMoveBoat(wxTimerEvent& event);
 
   /// Update dc panel with data from current race
   void FillDcList();

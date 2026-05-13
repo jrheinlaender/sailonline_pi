@@ -507,7 +507,7 @@ const std::list<Dc>& Race::GetDcs() const { return m_dcs; }
 
 std::list<Dc>& Race::GetDcs() { return m_dcs; }
 
-std::tuple<double, double, double> Race::GetBoatPosition() {
+std::tuple<double, double, double, double> Race::GetBoatData() {
   Login();
 
   if (m_sol_token.empty()) {
@@ -563,8 +563,10 @@ std::tuple<double, double, double> Race::GetBoatPosition() {
   double longitude = std::stod(node.first_child().value());
   node = boatdata_doc.select_node("/data/boat/cog").node();
   double course = std::stod(node.first_child().value()) / M_PI * 180.0;
+  node = boatdata_doc.select_node("/data/boat/sog").node();
+  double speed = std::stod(node.first_child().value());
 
-  return {latitude, longitude, course};
+  return {latitude, longitude, course, speed};
 }
 
 std::time_t Race::GetWeatherData() {

@@ -27,10 +27,10 @@
 #include <wx/stattext.h>
 #include <wx/html/htmlwin.h>
 #include <wx/button.h>
+#include <wx/spinctrl.h>
 #include <wx/notebook.h>
 #include <wx/splitter.h>
 #include <wx/clrpicker.h>
-#include <wx/spinctrl.h>
 #include <wx/checkbox.h>
 #include <wx/scrolwin.h>
 #include <wx/checklst.h>
@@ -140,6 +140,9 @@ class SailonlinePanel : public wxPanel
 		wxStaticText* m_staticText171;
 		wxStaticText* m_staticText173;
 		wxStaticText* m_staticText175;
+		wxStaticText* m_staticText22;
+		wxStaticText* m_staticText24;
+		wxStaticText* m_staticText25;
 
 		// Virtual event handlers, override them in your derived class
 		virtual void OnEditPositionClick( wxMouseEvent& event ) { event.Skip(); }
@@ -177,9 +180,11 @@ class SailonlinePanel : public wxPanel
 		wxButton* m_pbutton_modify;
 		wxButton* m_pbutton_copydcs;
 		wxStaticText* m_latitude;
-		wxButton* m_pbutton_updateposition;
 		wxStaticText* m_longitude;
 		wxStaticText* m_course;
+		wxStaticText* m_speed;
+		wxButton* m_pbutton_tracking;
+		wxSpinCtrl* m_pspin_updateinterval;
 
 		SailonlinePanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 800,502 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 

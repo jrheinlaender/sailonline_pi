@@ -128,9 +128,12 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
       wxEVT_COMMAND_BUTTON_CLICKED,
       wxCommandEventHandler(SailonlineUi::OnPolarDownload), nullptr, this);
   m_ppanel->m_pbutton_downloadpolar->Disable();
-  m_ppanel->m_pbutton_updateposition->Connect(
+  m_ppanel->m_pbutton_tracking->Connect(
       wxEVT_COMMAND_BUTTON_CLICKED,
-      wxCommandEventHandler(SailonlineUi::OnUpdatePosition), nullptr, this);
+      wxCommandEventHandler(SailonlineUi::OnStartStopTracking), nullptr, this);
+  m_ppanel->m_pspin_updateinterval->Connect(
+      wxEVT_COMMAND_SPINCTRL_UPDATED,
+      wxSpinEventHandler(SailonlineUi::OnUpdateInterval), nullptr, this);
   m_ppanel->m_pbutton_download->Connect(
       wxEVT_COMMAND_BUTTON_CLICKED,
       wxCommandEventHandler(SailonlineUi::OnDcDownload), nullptr, this);
@@ -149,6 +152,10 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
   m_ppanel->m_pbutton_copydcs->Connect(
       wxEVT_COMMAND_BUTTON_CLICKED,
       wxCommandEventHandler(SailonlineUi::OnCopyDcs), nullptr, this);
+
+  m_interval_boatquery = 30000; // 30s
+  m_tMoveBoat.Connect(
+      wxEVT_TIMER, wxTimerEventHandler(SailonlineUi::OnMoveBoat), NULL, this);
 }
 
 SailonlineUi::~SailonlineUi() {
@@ -157,9 +164,12 @@ SailonlineUi::~SailonlineUi() {
   m_ppanel->m_pbutton_downloadpolar->Disconnect(
       wxEVT_COMMAND_BUTTON_CLICKED,
       wxCommandEventHandler(SailonlineUi::OnPolarDownload), nullptr, this);
-  m_ppanel->m_pbutton_updateposition->Disconnect(
+  m_ppanel->m_pbutton_tracking->Disconnect(
       wxEVT_COMMAND_BUTTON_CLICKED,
-      wxCommandEventHandler(SailonlineUi::OnUpdatePosition), nullptr, this);
+      wxCommandEventHandler(SailonlineUi::OnStartStopTracking), nullptr, this);
+  m_ppanel->m_pspin_updateinterval->Disconnect(
+      wxEVT_COMMAND_SPINCTRL_UPDATED,
+      wxSpinEventHandler(SailonlineUi::OnUpdateInterval), nullptr, this);
   m_ppanel->m_pracelist->Disconnect(
       wxEVT_LIST_ITEM_SELECTED,
       wxListEventHandler(SailonlineUi::OnRaceSelected), nullptr, this);
@@ -182,6 +192,10 @@ SailonlineUi::~SailonlineUi() {
       wxEVT_COMMAND_BUTTON_CLICKED,
       wxCommandEventHandler(SailonlineUi::OnCopyDcs), nullptr, this);
 
+  m_tMoveBoat.Stop();
+  m_tMoveBoat.Disconnect(
+      wxEVT_TIMER, wxTimerEventHandler(SailonlineUi::OnMoveBoat), NULL, this);
+
   // TODO Move to _pi ?
   wxFileConfig* pconf = m_sailonline_pi.GetConf();
 
@@ -203,28 +217,6 @@ bool SailonlineUi::Show(bool show) {
   }
 
   return SailonlineUiBase::Show(show);
-}
-
-namespace {
-std::string DegreesToString(const double lat_lon, const unsigned digits, const char pos, const char neg) {
-  double degrees, decimals;
-  decimals = std::modf(std::fabs(lat_lon), &degrees);
-
-  wxString format = wxString::Format("%%0%u.0f", digits);
-  wxString result = wxString::Format(format, degrees)
-        + wxString::Format("%09.6f", decimals * 60.0)
-        + "," + (lat_lon >= 0 ? pos : neg) + ",";
-
-  return result.ToStdString();
-}
-
-std::string addCheckSum(const std::string& sentence) {
-  unsigned char XOR = 0;
-  for (size_t i = 0; i < sentence.size(); i++) XOR ^= (unsigned char)sentence[i];
-  std::stringstream tmpss;
-  tmpss << std::hex << (int)XOR;
-  return "$" + sentence + "*" + tmpss.str();
-}
 }
 
 void SailonlineUi::ShowPage(const int page) {
@@ -294,33 +286,8 @@ void SailonlineUi::ShowPage(const int page) {
         return;
       }
 
-      const auto& [latitude, longitude, course] = m_prace->GetBoatPosition();
-
-      if (latitude == 0.0 && longitude == 0.0 && course == 0.0) {
-        wxString errors;
-        for (const auto& e : m_prace->GetErrors())
-          errors = errors.append(e).append('\n');
-        wxLogMessage(errors.c_str());
-        OCPNMessageBox_PlugIn(this, errors,
-                              "Error downloading boat position information", wxOK);
-        return;
-      }
-
-      m_ppanel->m_latitude->SetLabel(wxString::Format("%.3f", latitude));
-      m_ppanel->m_longitude->SetLabel(wxString::Format("%.3f", longitude));
-      m_ppanel->m_course->SetLabel(wxString::Format("%.3f", course));
-
-      // Move boat to position
-      // Example: $IIGLL,5027.776667,N,412.690754,W,123327,A*26
-      PushNMEABuffer(
-        addCheckSum(
-            "IIGLL,"
-            + DegreesToString(latitude, 2, 'N', 'S')
-            + DegreesToString(longitude, 3, 'E', 'W')
-            + wxDateTime::Now().Format("%H%M%S", wxDateTime::UTC).ToStdString()
-            + ",A")
-        + "\r\n");
-      PushNMEABuffer(addCheckSum("IIHDT," + std::to_string(course) + "," + "T") + "\r\n");
+      // Run now to update data in the tab
+      m_tMoveBoat.StartOnce();
 
       if (!m_prace->DownloadWeatherUrl()) {
         wxString errors;
@@ -354,11 +321,28 @@ void SailonlineUi::OnRaceSelected(wxListEvent& event) {
 void SailonlineUi::OnPageChanged(wxBookCtrlEvent& event) {
   if (m_prace == nullptr) return;
 
+  // Prevent timer running outside of the Routing page
+  if (event.GetSelection() != RaceRouting)
+    m_tMoveBoat.Stop();
+
   ShowPage(event.GetSelection());
 }
 
-void SailonlineUi::OnUpdatePosition(wxCommandEvent&) {
-    ShowPage(1);
+void SailonlineUi::OnStartStopTracking(wxCommandEvent&) {
+  if (m_tMoveBoat.IsRunning())
+    m_tMoveBoat.Stop();
+  else {
+    m_tMoveBoat.StartOnce();
+    m_tMoveBoat.Start(5000);
+  }
+}
+
+void SailonlineUi::OnUpdateInterval(wxSpinEvent& event) {
+  /**
+   * Don't allow querying the server more often than every 5s
+   * Web GUI updates approx. every 10 seconds with 131 boats
+   */
+  m_interval_boatquery = std::max(5, event.GetValue()) * 1000;
 }
 
 void SailonlineUi::OnPolarDownload(wxCommandEvent&) {}
@@ -479,4 +463,86 @@ void SailonlineUi::OnCopyDcs(wxCommandEvent&) {
         new wxTextDataObject(dc_list));  // Don't delete, clipboard holds data
     wxTheClipboard->Close();
   }
+}
+
+namespace {
+std::string DegreesToString(const double lat_lon, const unsigned digits,
+                            const char pos, const char neg) {
+  double degrees, decimals;
+  decimals = std::modf(std::fabs(lat_lon), &degrees);
+
+  wxString format = wxString::Format("%%0%u.0f", digits);
+  wxString result = wxString::Format(format, degrees) +
+                    wxString::Format("%09.6f", decimals * 60.0) + "," +
+                    (lat_lon >= 0 ? pos : neg) + ",";
+
+  return result.ToStdString();
+}
+
+std::string addCheckSum(const std::string& sentence) {
+  unsigned char XOR = 0;
+  for (size_t i = 0; i < sentence.size(); i++)
+    XOR ^= (unsigned char)sentence[i];
+  std::stringstream tmpss;
+  tmpss << std::hex << (int)XOR;
+  return "$" + sentence + "*" + tmpss.str();
+}
+}  // namespace
+
+void SailonlineUi::OnMoveBoat(wxTimerEvent&) {
+  /**
+   * These can be static. When a race is changed, the page is changed to
+   * the description page. This stops the timer. Changing to the routing
+   * page calls OnMoveBoat() with a OneShot timer, thus updating the values.
+   */
+  static int timer_accumulated = 0;
+  static double latitude;
+  static double longitude;
+  static double course;
+  static double speed;
+
+  if (timer_accumulated == 0 || m_tMoveBoat.IsOneShot()) {
+    std::tie(latitude, longitude, course, speed) = m_prace->GetBoatData();
+
+    if (latitude == 0.0 && longitude == 0.0 && course == 0.0 && speed == 0.0) {
+      wxString errors;
+      for (const auto& e : m_prace->GetErrors())
+        errors = errors.append(e).append('\n');
+      wxLogMessage(errors.c_str());
+      OCPNMessageBox_PlugIn(
+          this, errors, "Error downloading boat position information", wxOK);
+      return;
+    }
+
+    // Update GUI
+    m_ppanel->m_latitude->SetLabel(wxString::Format("%.5f", latitude));
+    m_ppanel->m_longitude->SetLabel(wxString::Format("%.5f", longitude));
+    m_ppanel->m_course->SetLabel(wxString::Format("%.5f", course));
+    m_ppanel->m_speed->SetLabel(wxString::Format("%.5f", speed));
+
+    // Initialize timer for IsOneShot() case
+    timer_accumulated = 0;
+  }
+
+  /**
+   * Move boat to position
+   * This must happen regularly to avoid a watchdog timeout
+   * Example: $IIGLL,5027.776667,N,412.690754,W,123327,A*26
+   */
+  PushNMEABuffer(
+      addCheckSum(
+          "IIGLL," + DegreesToString(latitude, 2, 'N', 'S') +
+          DegreesToString(longitude, 3, 'E', 'W') +
+          wxDateTime::Now().Format("%H%M%S", wxDateTime::UTC).ToStdString() +
+          ",A") +
+      "\r\n");
+  // Set course and speed
+  PushNMEABuffer(addCheckSum("IIVTG," + std::to_string(course) + ",T,,M," +
+                             std::to_string(speed) + ",N," +
+                             std::to_string(speed * 1.852) + ",K," + "A") +
+                 "\r\n");
+
+  timer_accumulated += m_tMoveBoat.GetInterval();
+  if (timer_accumulated >= m_interval_boatquery)
+      timer_accumulated = 0;
 }

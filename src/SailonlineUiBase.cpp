@@ -470,44 +470,74 @@ SailonlinePanel::SailonlinePanel( wxWindow* parent, wxWindowID id, const wxPoint
 	wxBoxSizer* bSizer15;
 	bSizer15 = new wxBoxSizer( wxVERTICAL );
 
+	wxStaticBoxSizer* sbSizer6;
+	sbSizer6 = new wxStaticBoxSizer( new wxStaticBox( m_routing, wxID_ANY, _("label") ), wxHORIZONTAL );
+
 	wxFlexGridSizer* fgSizer107;
-	fgSizer107 = new wxFlexGridSizer( 0, 3, 0, 0 );
+	fgSizer107 = new wxFlexGridSizer( 0, 2, 0, 0 );
 	fgSizer107->AddGrowableCol( 1 );
 	fgSizer107->SetFlexibleDirection( wxBOTH );
 	fgSizer107->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
 
-	m_staticText171 = new wxStaticText( m_routing, wxID_ANY, _("Latitude"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText171 = new wxStaticText( sbSizer6->GetStaticBox(), wxID_ANY, _("Latitude"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText171->Wrap( -1 );
 	fgSizer107->Add( m_staticText171, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	m_latitude = new wxStaticText( m_routing, wxID_ANY, _("0"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_latitude = new wxStaticText( sbSizer6->GetStaticBox(), wxID_ANY, _("0"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_latitude->Wrap( -1 );
 	fgSizer107->Add( m_latitude, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	m_pbutton_updateposition = new wxButton( m_routing, wxID_ANY, _("Update"), wxDefaultPosition, wxDefaultSize, 0 );
-	fgSizer107->Add( m_pbutton_updateposition, 0, wxALL, 5 );
-
-	m_staticText173 = new wxStaticText( m_routing, wxID_ANY, _("Longitude"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText173 = new wxStaticText( sbSizer6->GetStaticBox(), wxID_ANY, _("Longitude"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText173->Wrap( -1 );
 	fgSizer107->Add( m_staticText173, 0, wxALL, 5 );
 
-	m_longitude = new wxStaticText( m_routing, wxID_ANY, _("0"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_longitude = new wxStaticText( sbSizer6->GetStaticBox(), wxID_ANY, _("0"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_longitude->Wrap( -1 );
 	fgSizer107->Add( m_longitude, 0, wxALL, 5 );
 
-
-	fgSizer107->Add( 0, 0, 1, wxEXPAND, 5 );
-
-	m_staticText175 = new wxStaticText( m_routing, wxID_ANY, _("Course"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText175 = new wxStaticText( sbSizer6->GetStaticBox(), wxID_ANY, _("Course"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText175->Wrap( -1 );
 	fgSizer107->Add( m_staticText175, 0, wxALL, 5 );
 
-	m_course = new wxStaticText( m_routing, wxID_ANY, _("0"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_course = new wxStaticText( sbSizer6->GetStaticBox(), wxID_ANY, _("0"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_course->Wrap( -1 );
 	fgSizer107->Add( m_course, 0, wxALL, 5 );
 
+	m_staticText22 = new wxStaticText( sbSizer6->GetStaticBox(), wxID_ANY, _("Speed"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText22->Wrap( -1 );
+	fgSizer107->Add( m_staticText22, 0, wxALL, 5 );
 
-	bSizer15->Add( fgSizer107, 1, wxALL|wxEXPAND, 5 );
+	m_speed = new wxStaticText( sbSizer6->GetStaticBox(), wxID_ANY, _("0"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_speed->Wrap( -1 );
+	fgSizer107->Add( m_speed, 0, wxALL, 5 );
+
+
+	sbSizer6->Add( fgSizer107, 1, wxALL|wxEXPAND, 5 );
+
+	wxFlexGridSizer* fgSizer19;
+	fgSizer19 = new wxFlexGridSizer( 0, 4, 0, 0 );
+	fgSizer19->SetFlexibleDirection( wxBOTH );
+	fgSizer19->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
+
+	m_pbutton_tracking = new wxButton( sbSizer6->GetStaticBox(), wxID_ANY, _("Start tracking"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer19->Add( m_pbutton_tracking, 0, wxALL, 5 );
+
+	m_staticText24 = new wxStaticText( sbSizer6->GetStaticBox(), wxID_ANY, _("Interval"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText24->Wrap( -1 );
+	fgSizer19->Add( m_staticText24, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	m_pspin_updateinterval = new wxSpinCtrl( sbSizer6->GetStaticBox(), wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 5, 3600, 30 );
+	fgSizer19->Add( m_pspin_updateinterval, 0, wxALL, 5 );
+
+	m_staticText25 = new wxStaticText( sbSizer6->GetStaticBox(), wxID_ANY, _("s"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText25->Wrap( -1 );
+	fgSizer19->Add( m_staticText25, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+
+	sbSizer6->Add( fgSizer19, 1, wxEXPAND, 5 );
+
+
+	bSizer15->Add( sbSizer6, 1, wxEXPAND, 5 );
 
 
 	m_routing->SetSizer( bSizer15 );
