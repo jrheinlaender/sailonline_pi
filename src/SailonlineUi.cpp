@@ -153,7 +153,7 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
       wxEVT_COMMAND_BUTTON_CLICKED,
       wxCommandEventHandler(SailonlineUi::OnCopyDcs), nullptr, this);
 
-  m_interval_boatquery = 30000; // 30s
+  m_interval_boatquery = 30000;  // 30s
   m_tMoveBoat.Connect(
       wxEVT_TIMER, wxTimerEventHandler(SailonlineUi::OnMoveBoat), NULL, this);
 }
@@ -228,8 +228,7 @@ void SailonlineUi::ShowPage(const int page) {
   if (m_prace == nullptr) return;
 
   switch (page) {
-    case RaceDescription:
-    {
+    case RaceDescription: {
       // Fill first tab with information about the race
       m_ppanel->SetLabel(m_prace->m_id);
 
@@ -242,8 +241,7 @@ void SailonlineUi::ShowPage(const int page) {
 
       break;
     }
-    case RaceInformation:
-    {
+    case RaceInformation: {
       if (!m_prace->DownloadPolar() || !m_prace->DownloadWaypoints()) {
         wxString errors;
         for (const auto& e : m_prace->GetErrors())
@@ -258,28 +256,26 @@ void SailonlineUi::ShowPage(const int page) {
       m_ppanel->m_pbutton_downloadpolar->Enable(true);
 
       for (const auto& wp : m_prace->GetWaypoints()) {
-          wxListItem item;
+        wxListItem item;
         long index = m_ppanel->m_pwaypointlist->InsertItem(
             m_ppanel->m_pwaypointlist->GetItemCount(), item);
         m_ppanel->m_pwaypointlist->SetItem(index, 0, wp->m_GUID);
         m_ppanel->m_pwaypointlist->SetItem(index, 1, wp->m_MarkName);
       }
 
-        for (int i = 0; i < m_ppanel->m_pwaypointlist->GetColumnCount(); ++i)
-            m_ppanel->m_pwaypointlist->SetColumnWidth(i, wxLIST_AUTOSIZE);
+      for (int i = 0; i < m_ppanel->m_pwaypointlist->GetColumnCount(); ++i)
+        m_ppanel->m_pwaypointlist->SetColumnWidth(i, wxLIST_AUTOSIZE);
 
       break;
     }
-    case RaceDcList:
-    {
+    case RaceDcList: {
       m_prace->DownloadWaypoints();
       // m_prace->DownloadDcs();
       FillDcList();
 
       break;
     }
-    case RaceRouting:
-    {
+    case RaceRouting: {
       if (!m_prace->DownloadBoatUrl()) {
         wxString errors;
         for (const auto& e : m_prace->GetErrors())
@@ -326,8 +322,7 @@ void SailonlineUi::OnPageChanged(wxBookCtrlEvent& event) {
   if (m_prace == nullptr) return;
 
   // Prevent timer running outside of the Routing page
-  if (event.GetSelection() != RaceRouting)
-    m_tMoveBoat.Stop();
+  if (event.GetSelection() != RaceRouting) m_tMoveBoat.Stop();
 
   ShowPage(event.GetSelection());
 }
@@ -370,8 +365,8 @@ void SailonlineUi::FillDcList() {
     wxListItem item;
     long index = m_ppanel->m_pdclist->InsertItem(
         m_ppanel->m_pdclist->GetItemCount(), item);
-    m_ppanel->m_pdclist->SetItem(index, 0,
-                                 dc->m_timestamp.Format("%Y/%m/%d %H:%M:%S", wxDateTime::UTC));
+    m_ppanel->m_pdclist->SetItem(
+        index, 0, dc->m_timestamp.Format("%Y/%m/%d %H:%M:%S", wxDateTime::UTC));
     m_ppanel->m_pdclist->SetItem(index, 1, dc->m_is_twa ? "twa" : "cc");
     m_ppanel->m_pdclist->SetItem(index, 2,
                                  wxString::Format("%03.3f", dc->m_course));
@@ -454,7 +449,8 @@ void SailonlineUi::OnCopyDcs(wxCommandEvent&) {
   const auto& dcs = m_prace->GetDcs();
 
   for (const auto& dc : dcs) {
-    wxString timestamp = dc.m_timestamp.Format("%Y/%m/%d %H:%M:%S", wxDateTime::UTC);
+    wxString timestamp =
+        dc.m_timestamp.Format("%Y/%m/%d %H:%M:%S", wxDateTime::UTC);
     wxString coursetype = (dc.m_is_twa ? "twa" : "cc");
     wxString course =
         wxString::Format("%03.3f", dc.m_is_twa ? dc.m_twa : dc.m_course);
@@ -549,6 +545,5 @@ void SailonlineUi::OnMoveBoat(wxTimerEvent&) {
                  "\r\n");
 
   timer_accumulated += m_tMoveBoat.GetInterval();
-  if (timer_accumulated >= m_interval_boatquery)
-      timer_accumulated = 0;
+  if (timer_accumulated >= m_interval_boatquery) timer_accumulated = 0;
 }

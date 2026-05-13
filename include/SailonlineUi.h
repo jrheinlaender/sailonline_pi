@@ -55,10 +55,10 @@ private:
 
   // Pages
   enum {
-      RaceDescription = 0,
-      RaceInformation = 1,
-      RaceDcList = 2,
-      RaceRouting = 3
+    RaceDescription = 0,
+    RaceInformation = 1,
+    RaceDcList = 2,
+    RaceRouting = 3
   } Pages;
 
   // Show data on selected notebook page

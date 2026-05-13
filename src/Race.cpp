@@ -374,7 +374,8 @@ bool Race::DownloadPolar() {
   wxFileName download_target = m_sailonline_pi.GetDataDir("Polar");
   download_target.SetFullName(
       wxString::Format("SOL_%s_polar.csv", polar_name.c_str()));
-  wxLogMessage("Writing boat polar to %s", download_target.GetFullPath().c_str());
+  wxLogMessage("Writing boat polar to %s",
+               download_target.GetFullPath().c_str());
   wxFile polar_file(download_target.GetFullPath(), wxFile::write);
   if (polar_file.Error()) {
     m_errors.emplace_back("Could not write to polar file");
@@ -655,7 +656,7 @@ std::pair<double, double> Race::GetWindData(const wxDateTime& time, double lat,
   Json::FastWriter writer;
   if (!time.IsValid()) return {-1.0, -1.0};
 
-  v["Day"] = time.GetDay(); // Converts to local time
+  v["Day"] = time.GetDay();  // Converts to local time
   v["Month"] = time.GetMonth();
   v["Year"] = time.GetYear();
   v["Hour"] = time.GetHour();
@@ -703,7 +704,8 @@ double Race::GetSpeedThroughWater(double tws, double twa) const {
   if (reply != Json::nullValue && reply.isMember("BOAT SPEED"))
     return reply["BOAT SPEED"].asDouble();
 
-  wxLogMessage("Invalid speed through water: %s", reply["Error"].asString().c_str());
+  wxLogMessage("Invalid speed through water: %s",
+               reply["Error"].asString().c_str());
   return -1.0;
 }
 
@@ -1007,8 +1009,9 @@ void Race::MakeTrack() const {
   if (m_dcs.empty()) return;
 
   PlugIn_Track track;
-  track.m_NameString = "SOL " + m_id + " " +
-                       m_dcs.front().m_timestamp.Format("%x %H:%M", wxDateTime::UTC);
+  track.m_NameString =
+      "SOL " + m_id + " " +
+      m_dcs.front().m_timestamp.Format("%x %H:%M", wxDateTime::UTC);
   track.m_StartString = "Start";
   track.m_EndString = "End";
   track.m_GUID = GetNewGUID();
@@ -1041,49 +1044,53 @@ void Race::MakeTrack() const {
     double jump = std::min(time_seconds, 30.0);
     wxTimeSpan jump_span(0, 0, jump);
 
-    for (; current_time < next_dc->m_timestamp.Add(jump_span); current_time.Add(jump_span)) {
-        // Handle last, fractional jump
-        if (current_time > next_dc->m_timestamp) {
-            jump = (current_time - next_dc->m_timestamp).GetSeconds().ToDouble();
-            current_time = next_dc->m_timestamp;
-        }
+    for (; current_time < next_dc->m_timestamp.Add(jump_span);
+         current_time.Add(jump_span)) {
+      // Handle last, fractional jump
+      if (current_time > next_dc->m_timestamp) {
+        jump = (current_time - next_dc->m_timestamp).GetSeconds().ToDouble();
+        current_time = next_dc->m_timestamp;
+      }
 
-        // Get course and twa
-        auto [tws, twd] = GetWindData(current_time, current_lat, current_lon);
-        double twa;
-        double course;
-        if (dc->m_is_twa) {
-            twa = dc->m_twa;
-            course = twd - twa;
-        } else {
-            twa = twd - dc->m_course;  // positive sign: starboard tack
-            if (twa < -180.0)
-                twa += 360.0;
-            else if (twa > 180.0)
-                twa -= 360.0;
-            course = dc->m_course;
-        }
+      // Get course and twa
+      auto [tws, twd] = GetWindData(current_time, current_lat, current_lon);
+      double twa;
+      double course;
+      if (dc->m_is_twa) {
+        twa = dc->m_twa;
+        course = twd - twa;
+      } else {
+        twa = twd - dc->m_course;  // positive sign: starboard tack
+        if (twa < -180.0)
+          twa += 360.0;
+        else if (twa > 180.0)
+          twa -= 360.0;
+        course = dc->m_course;
+      }
 
-        // Get theoretical speed, performance and current speed
-        double theoretical_stw = GetSpeedThroughWater(tws, twa);
-        performance =
-            get_performance(performance, theoretical_stw, previous_twa, twa);
-        double current_stw = theoretical_stw * performance;
+      // Get theoretical speed, performance and current speed
+      double theoretical_stw = GetSpeedThroughWater(tws, twa);
+      performance =
+          get_performance(performance, theoretical_stw, previous_twa, twa);
+      double current_stw = theoretical_stw * performance;
 
-        // Performance recovery
-        if (performance < 1.0) {
-            performance = get_recovery_step(performance, jump, current_stw);
-            current_stw = theoretical_stw * performance;
-        }
+      // Performance recovery
+      if (performance < 1.0) {
+        performance = get_recovery_step(performance, jump, current_stw);
+        current_stw = theoretical_stw * performance;
+      }
 
-        double dist = current_stw * jump / 3600.0;
-        PositionBearingDistanceMercator_Plugin(
-            current_lat, current_lon, course, dist, &current_lat, &current_lon);
+
+      double dist = current_stw * jump / 3600.0;
+      PositionBearingDistanceMercator_Plugin(current_lat, current_lon, course,
+                                             dist, &current_lat, &current_lon);
     }
 
     double temp;
     double diff_dist;
-    DistanceBearingMercator_Plugin(current_lat, current_lon, next_dc->m_lat_start, next_dc->m_lon_start, &temp, &diff_dist);
+    DistanceBearingMercator_Plugin(current_lat, current_lon,
+                                   next_dc->m_lat_start, next_dc->m_lon_start,
+                                   &temp, &diff_dist);
   }
 
   AddPlugInTrack(&track);  // Note: Contents are copied
