@@ -96,18 +96,16 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
   // Finish
   m_ppanel->m_pracelist->SetColumnWidth(0, wxLIST_AUTOSIZE);
   m_ppanel->m_pracelist->SetColumnWidth(1, wxLIST_AUTOSIZE);
-  m_ppanel->m_pracelist->Connect(
-      wxEVT_LIST_ITEM_SELECTED,
-      wxListEventHandler(SailonlineUi::OnRaceSelected), nullptr, this);
+  m_ppanel->m_pracelist->Bind(
+      wxEVT_LIST_ITEM_SELECTED, &SailonlineUi::OnRaceSelected, this);
 
   if (!GetSol()->GetRaces().empty())
     m_ppanel->m_pracelist->SetItemState(m_ppanel->m_pracelist->GetTopItem(),
                                         wxLIST_STATE_SELECTED,
                                         wxLIST_STATE_SELECTED);
 
-  m_ppanel->m_notebook->Connect(
-      wxEVT_NOTEBOOK_PAGE_CHANGING,
-      wxBookCtrlEventHandler(SailonlineUi::OnPageChanged), nullptr, this);
+  m_ppanel->m_notebook->Bind(
+      wxEVT_NOTEBOOK_PAGE_CHANGING, &SailonlineUi::OnPageChanged, this);
   m_ppanel->m_notebook->SetSelection(RaceDescription);  // Show first tab
 
   m_ppanel->m_pwaypointlist->ClearAll();
@@ -124,81 +122,34 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
   m_ppanel->m_pdclist->InsertColumn(6, _("Perf1"));
   m_ppanel->m_pdclist->InsertColumn(7, _("Perf2"));
 
-  m_ppanel->m_pbutton_downloadpolar->Connect(
-      wxEVT_COMMAND_BUTTON_CLICKED,
-      wxCommandEventHandler(SailonlineUi::OnPolarDownload), nullptr, this);
+  m_ppanel->m_pbutton_downloadpolar->Bind(
+      wxEVT_COMMAND_BUTTON_CLICKED, &SailonlineUi::OnPolarDownload, this);
   m_ppanel->m_pbutton_downloadpolar->Disable();
-  m_ppanel->m_pbutton_tracking->Connect(
-      wxEVT_COMMAND_BUTTON_CLICKED,
-      wxCommandEventHandler(SailonlineUi::OnStartStopTracking), nullptr, this);
-  m_ppanel->m_pspin_updateinterval->Connect(
-      wxEVT_COMMAND_SPINCTRL_UPDATED,
-      wxSpinEventHandler(SailonlineUi::OnUpdateInterval), nullptr, this);
-  m_ppanel->m_pbutton_download->Connect(
-      wxEVT_COMMAND_BUTTON_CLICKED,
-      wxCommandEventHandler(SailonlineUi::OnDcDownload), nullptr, this);
-  m_ppanel->m_pbutton_upload->Connect(
-      wxEVT_COMMAND_BUTTON_CLICKED,
-      wxCommandEventHandler(SailonlineUi::OnDcUpload), nullptr, this);
-  m_ppanel->m_pbutton_fromtrack->Connect(
-      wxEVT_COMMAND_BUTTON_CLICKED,
-      wxCommandEventHandler(SailonlineUi::OnDcFromTrack), nullptr, this);
-  m_ppanel->m_pbutton_totrack->Connect(
-      wxEVT_COMMAND_BUTTON_CLICKED,
-      wxCommandEventHandler(SailonlineUi::OnDcToTrack), nullptr, this);
-  m_ppanel->m_pbutton_modify->Connect(
-      wxEVT_COMMAND_BUTTON_CLICKED,
-      wxCommandEventHandler(SailonlineUi::OnDcModify), nullptr, this);
-  m_ppanel->m_pbutton_copydcs->Connect(
-      wxEVT_COMMAND_BUTTON_CLICKED,
-      wxCommandEventHandler(SailonlineUi::OnCopyDcs), nullptr, this);
+  m_ppanel->m_pbutton_tracking->Bind(
+      wxEVT_COMMAND_BUTTON_CLICKED, &SailonlineUi::OnStartStopTracking, this);
+  m_ppanel->m_pspin_updateinterval->Bind(
+      wxEVT_COMMAND_SPINCTRL_UPDATED, &SailonlineUi::OnUpdateInterval, this);
+  m_ppanel->m_pbutton_download->Bind(
+      wxEVT_COMMAND_BUTTON_CLICKED, &SailonlineUi::OnDcDownload, this);
+  m_ppanel->m_pbutton_upload->Bind(
+      wxEVT_COMMAND_BUTTON_CLICKED, &SailonlineUi::OnDcUpload, this);
+  m_ppanel->m_pbutton_fromtrack->Bind(
+      wxEVT_COMMAND_BUTTON_CLICKED, &SailonlineUi::OnDcFromTrack, this);
+  m_ppanel->m_pbutton_totrack->Bind(
+      wxEVT_COMMAND_BUTTON_CLICKED, &SailonlineUi::OnDcToTrack, this);
+  m_ppanel->m_pbutton_modify->Bind(
+      wxEVT_COMMAND_BUTTON_CLICKED, &SailonlineUi::OnDcModify, this);
+  m_ppanel->m_pbutton_copydcs->Bind(
+      wxEVT_COMMAND_BUTTON_CLICKED, &SailonlineUi::OnCopyDcs, this);
 
   m_interval_boatquery = 30000;  // 30s
-  m_tMoveBoat.Connect(
-      wxEVT_TIMER, wxTimerEventHandler(SailonlineUi::OnMoveBoat), NULL, this);
+  m_tMoveBoat.Bind(
+      wxEVT_TIMER, &SailonlineUi::OnMoveBoat, this);
 }
 
 SailonlineUi::~SailonlineUi() {
   std::cout << "Destructor of SailonlineUi" << std::endl;
-
-  m_ppanel->m_notebook->Disconnect(
-      wxEVT_NOTEBOOK_PAGE_CHANGING,
-      wxBookCtrlEventHandler(SailonlineUi::OnPageChanged), nullptr, this);
-
-  m_ppanel->m_pbutton_downloadpolar->Disconnect(
-      wxEVT_COMMAND_BUTTON_CLICKED,
-      wxCommandEventHandler(SailonlineUi::OnPolarDownload), nullptr, this);
-  m_ppanel->m_pbutton_tracking->Disconnect(
-      wxEVT_COMMAND_BUTTON_CLICKED,
-      wxCommandEventHandler(SailonlineUi::OnStartStopTracking), nullptr, this);
-  m_ppanel->m_pspin_updateinterval->Disconnect(
-      wxEVT_COMMAND_SPINCTRL_UPDATED,
-      wxSpinEventHandler(SailonlineUi::OnUpdateInterval), nullptr, this);
-  m_ppanel->m_pracelist->Disconnect(
-      wxEVT_LIST_ITEM_SELECTED,
-      wxListEventHandler(SailonlineUi::OnRaceSelected), nullptr, this);
-  m_ppanel->m_pbutton_download->Disconnect(
-      wxEVT_COMMAND_BUTTON_CLICKED,
-      wxCommandEventHandler(SailonlineUi::OnDcDownload), nullptr, this);
-  m_ppanel->m_pbutton_upload->Disconnect(
-      wxEVT_COMMAND_BUTTON_CLICKED,
-      wxCommandEventHandler(SailonlineUi::OnDcUpload), nullptr, this);
-  m_ppanel->m_pbutton_fromtrack->Disconnect(
-      wxEVT_COMMAND_BUTTON_CLICKED,
-      wxCommandEventHandler(SailonlineUi::OnDcFromTrack), nullptr, this);
-  m_ppanel->m_pbutton_fromtrack->Disconnect(
-      wxEVT_COMMAND_BUTTON_CLICKED,
-      wxCommandEventHandler(SailonlineUi::OnDcToTrack), nullptr, this);
-  m_ppanel->m_pbutton_modify->Disconnect(
-      wxEVT_COMMAND_BUTTON_CLICKED,
-      wxCommandEventHandler(SailonlineUi::OnDcModify), nullptr, this);
-  m_ppanel->m_pbutton_copydcs->Disconnect(
-      wxEVT_COMMAND_BUTTON_CLICKED,
-      wxCommandEventHandler(SailonlineUi::OnCopyDcs), nullptr, this);
-
   m_tMoveBoat.Stop();
-  m_tMoveBoat.Disconnect(
-      wxEVT_TIMER, wxTimerEventHandler(SailonlineUi::OnMoveBoat), NULL, this);
 
   // TODO Move to _pi ?
   wxFileConfig* pconf = m_sailonline_pi.GetConf();
