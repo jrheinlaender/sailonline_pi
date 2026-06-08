@@ -2554,7 +2554,7 @@
                               <property name="proportion">1</property>
                               <object class="wxStaticBoxSizer" expanded="true">
                                 <property name="id">wxID_ANY</property>
-                                <property name="label">label</property>
+                                <property name="label">Position</property>
                                 <property name="minimum_size"></property>
                                 <property name="name">sbSizer6</property>
                                 <property name="orient">wxHORIZONTAL</property>
@@ -2564,7 +2564,7 @@
                                   <property name="border">5</property>
                                   <property name="flag">wxALL|wxEXPAND</property>
                                   <property name="proportion">1</property>
-                                  <object class="wxFlexGridSizer" expanded="true">
+                                  <object class="wxFlexGridSizer" expanded="false">
                                     <property name="cols">2</property>
                                     <property name="flexible_direction">wxBOTH</property>
                                     <property name="growablecols">1</property>
@@ -3078,7 +3078,7 @@
                                   <property name="border">5</property>
                                   <property name="flag">wxEXPAND</property>
                                   <property name="proportion">1</property>
-                                  <object class="wxFlexGridSizer" expanded="true">
+                                  <object class="wxFlexGridSizer" expanded="false">
                                     <property name="cols">4</property>
                                     <property name="flexible_direction">wxBOTH</property>
                                     <property name="growablecols"></property>
@@ -3289,11 +3289,11 @@
                                         <property name="window_style"></property>
                                       </object>
                                     </object>
-                                    <object class="sizeritem" expanded="true">
+                                    <object class="sizeritem" expanded="false">
                                       <property name="border">5</property>
                                       <property name="flag">wxALIGN_CENTER_VERTICAL|wxALL</property>
                                       <property name="proportion">0</property>
-                                      <object class="wxStaticText" expanded="true">
+                                      <object class="wxStaticText" expanded="false">
                                         <property name="BottomDockable">1</property>
                                         <property name="LeftDockable">1</property>
                                         <property name="RightDockable">1</property>

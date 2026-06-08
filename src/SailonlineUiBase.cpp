@@ -471,7 +471,7 @@ SailonlinePanel::SailonlinePanel( wxWindow* parent, wxWindowID id, const wxPoint
 	bSizer15 = new wxBoxSizer( wxVERTICAL );
 
 	wxStaticBoxSizer* sbSizer6;
-	sbSizer6 = new wxStaticBoxSizer( new wxStaticBox( m_routing, wxID_ANY, _("label") ), wxHORIZONTAL );
+	sbSizer6 = new wxStaticBoxSizer( new wxStaticBox( m_routing, wxID_ANY, _("Position") ), wxHORIZONTAL );
 
 	wxFlexGridSizer* fgSizer107;
 	fgSizer107 = new wxFlexGridSizer( 0, 2, 0, 0 );

@@ -105,7 +105,12 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
                                         wxLIST_STATE_SELECTED);
 
   m_ppanel->m_notebook->Bind(
-      wxEVT_NOTEBOOK_PAGE_CHANGING, &SailonlineUi::OnPageChanged, this);
+      wxEVT_NOTEBOOK_PAGE_CHANGING, [=](wxBookCtrlEvent& event) {
+        // Prevent timer running outside of the Routing page
+        if (event.GetSelection() != RaceRouting) m_tMoveBoat.Stop();
+      });
+  m_ppanel->m_notebook->Bind(
+      wxEVT_NOTEBOOK_PAGE_CHANGED, &SailonlineUi::OnPageChanged, this);
   m_ppanel->m_notebook->SetSelection(RaceDescription);  // Show first tab
 
   m_ppanel->m_pwaypointlist->ClearAll();
@@ -128,7 +133,13 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
   m_ppanel->m_pbutton_tracking->Bind(
       wxEVT_COMMAND_BUTTON_CLICKED, &SailonlineUi::OnStartStopTracking, this);
   m_ppanel->m_pspin_updateinterval->Bind(
-      wxEVT_COMMAND_SPINCTRL_UPDATED, &SailonlineUi::OnUpdateInterval, this);
+      wxEVT_COMMAND_SPINCTRL_UPDATED, [=](wxSpinEvent& event) {
+        /**
+        * Don't allow querying the server more often than every 5s
+        * Web GUI updates approx. every 10 seconds with 131 boats
+        */
+        m_interval_boatquery = std::max(5, event.GetValue()) * 1000;
+      });
   m_ppanel->m_pbutton_download->Bind(
       wxEVT_COMMAND_BUTTON_CLICKED, &SailonlineUi::OnDcDownload, this);
   m_ppanel->m_pbutton_upload->Bind(
@@ -136,7 +147,10 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
   m_ppanel->m_pbutton_fromtrack->Bind(
       wxEVT_COMMAND_BUTTON_CLICKED, &SailonlineUi::OnDcFromTrack, this);
   m_ppanel->m_pbutton_totrack->Bind(
-      wxEVT_COMMAND_BUTTON_CLICKED, &SailonlineUi::OnDcToTrack, this);
+      wxEVT_COMMAND_BUTTON_CLICKED, [=](wxCommandEvent) {
+        if (m_prace == nullptr) return;
+        m_prace->MakeTrack();
+      });
   m_ppanel->m_pbutton_modify->Bind(
       wxEVT_COMMAND_BUTTON_CLICKED, &SailonlineUi::OnDcModify, this);
   m_ppanel->m_pbutton_copydcs->Bind(
@@ -177,6 +191,9 @@ bool SailonlineUi::Show(bool show) {
 void SailonlineUi::ShowPage(const int page) {
   // TODO explain to user why it's not working
   if (m_prace == nullptr) return;
+
+  // Prevent timer running outside of the Routing page
+  if (page != RaceRouting) m_tMoveBoat.Stop();
 
   switch (page) {
     case RaceDescription: {
@@ -272,9 +289,6 @@ void SailonlineUi::OnRaceSelected(wxListEvent& event) {
 void SailonlineUi::OnPageChanged(wxBookCtrlEvent& event) {
   if (m_prace == nullptr) return;
 
-  // Prevent timer running outside of the Routing page
-  if (event.GetSelection() != RaceRouting) m_tMoveBoat.Stop();
-
   ShowPage(event.GetSelection());
 }
 
@@ -287,14 +301,6 @@ void SailonlineUi::OnStartStopTracking(wxCommandEvent&) {
     m_tMoveBoat.Start(5000);
     m_ppanel->m_pbutton_tracking->SetLabel(_("Stop tracking"));
   }
-}
-
-void SailonlineUi::OnUpdateInterval(wxSpinEvent& event) {
-  /**
-   * Don't allow querying the server more often than every 5s
-   * Web GUI updates approx. every 10 seconds with 131 boats
-   */
-  m_interval_boatquery = std::max(5, event.GetValue()) * 1000;
 }
 
 void SailonlineUi::OnPolarDownload(wxCommandEvent&) {}
@@ -376,12 +382,6 @@ void SailonlineUi::OnDcFromTrack(wxCommandEvent&) {
 
     FillDcList();
   }
-}
-
-void SailonlineUi::OnDcToTrack(wxCommandEvent&) {
-  if (m_prace == nullptr) return;
-
-  m_prace->MakeTrack();
 }
 
 void SailonlineUi::OnDcModify(wxCommandEvent&) {

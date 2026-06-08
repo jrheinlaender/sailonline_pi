@@ -72,11 +72,9 @@ private:
   void OnPageChanged(wxBookCtrlEvent& event);
   void OnPolarDownload(wxCommandEvent& event);
   void OnStartStopTracking(wxCommandEvent& event);
-  void OnUpdateInterval(wxSpinEvent& event);
   void OnDcDownload(wxCommandEvent& event);
   void OnDcUpload(wxCommandEvent& event);
   void OnDcFromTrack(wxCommandEvent& event);
-  void OnDcToTrack(wxCommandEvent& event);
   void OnDcModify(wxCommandEvent& event);
   void OnCopyDcs(wxCommandEvent& event);
   void OnMoveBoat(wxTimerEvent& event);

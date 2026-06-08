@@ -152,10 +152,13 @@ std::string curl_extract_cookie(CURL* curl, const std::string& name) {
 
 static size_t curl_write_cb(void* contents, size_t size, size_t nmemb,
                             void* userp) {
-  wxLogMessage("Receiving %u bytes of data", size * nmemb);
+  wxLogMessage("Receiving %zd bytes of data", size * nmemb);
   size_t realsize = size * nmemb;
   std::string* data = static_cast<std::string*>(userp);
   data->append(static_cast<const char*>(contents), realsize);
+
+  wxSafeYield();
+
   return realsize;
 }
 }  // namespace
@@ -329,19 +332,9 @@ wxString Race::GetRaceInfo() {
   //    zlib-compressed xml file containing data about every boat in the race
   //    From bash do printf "\x1f\x8b\x08\x00\x00\x00\x00\x00" |cat -
   //    race_1967.xml |gzip -dc|more
-  // tag <weatherurl>:
-  // https://www.sailonline.org/webclient/weatherinfo_122.xml?token=<TOKEN>
-  //    Text file
-  //       122 2025/12/21 16:24:15
-  //       http://sailonline.org/site_media/weather/xml/weather_122_global_gfs_20251221_1624.xml
-  //    From this link the weather data can be downloaded (without token)
   // tag <traceUrl>:
   // https://www.sailonline.org/webclient/traces_1967.xml?token=<TOKEN>
   //    zlib-compressed xml file containing tracks of all boats?
-  // tag <boaturl>:
-
-  // Polar <boat><vpp><tws_splined> integer 0:max, <twa_splined> integer
-  // 0:180, <bs_splined> float
 
   return result;
 }

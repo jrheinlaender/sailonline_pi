@@ -93,7 +93,6 @@ sailonline_pi::sailonline_pi(void* ppimgr) : opencpn_plugin_121(ppimgr) {
 sailonline_pi::~sailonline_pi() {}
 
 int sailonline_pi::Init(void) {
-  std::cout << "SOL: Init()" << std::endl;
   // Adds local language support for the plugin to OCPN
   AddLocaleCatalog(PLUGIN_CATALOG_NAME);
 
