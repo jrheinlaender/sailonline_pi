@@ -675,7 +675,7 @@ std::pair<double, double> Race::GetWindData(const wxDateTime& time, double lat,
 }
 
 double Race::GetSpeedThroughWater(double tws, double twa) const {
-  if (std::fabs(twa) <= kTwaZero) return 0.0;
+  if (std::fabs(twa) <= kTwaZero || tws < 0.0) return 0.0;
 
   Json::Value v;
   Json::FastWriter writer;
@@ -805,10 +805,11 @@ void Race::SimplifyDcs() {
 
 namespace {
 // Course change required to reach 93% performance is ca. 100.3 degrees
-// Add 6 seconds of performance recovery at 5kn
+// Add 6 seconds of performance recovery at 5kn for time between course changes
+// Add 11 seconds (1 server jump) of performance recovery at 5kn for recovery after maneuver
 // TODO Make that precise in calculation below
 // TODO Give safety margin for weather beyond next forecast
-static constexpr double max_recovery = 6.0 * 3.0 / (20.0 * 5.0) / 100.0;
+static constexpr double max_recovery = (6.0 + 11.0) * 3.0 / (20.0 * 5.0) / 100.0;
 static constexpr double course_change_for_max_loss =
     (0.07 + max_recovery) * 180.0 / M_PI * 25.0;
 }  // namespace

@@ -107,10 +107,17 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
   m_ppanel->m_notebook->Bind(
       wxEVT_NOTEBOOK_PAGE_CHANGING, [=](wxBookCtrlEvent& event) {
         // Prevent timer running outside of the Routing page
-        if (event.GetSelection() != RaceRouting) m_tMoveBoat.Stop();
+        if (event.GetSelection() != RaceRouting) {
+            m_tMoveBoat.Stop();
+            m_ppanel->m_pbutton_tracking->SetLabel(_("Start tracking"));
+        }
       });
   m_ppanel->m_notebook->Bind(
-      wxEVT_NOTEBOOK_PAGE_CHANGED, &SailonlineUi::OnPageChanged, this);
+      wxEVT_NOTEBOOK_PAGE_CHANGED, [=](wxBookCtrlEvent& event) {
+        if (m_prace == nullptr) return;
+        ShowPage(event.GetSelection());
+      });
+
   m_ppanel->m_notebook->SetSelection(RaceDescription);  // Show first tab
 
   m_ppanel->m_pwaypointlist->ClearAll();
@@ -188,12 +195,20 @@ bool SailonlineUi::Show(bool show) {
   return SailonlineUiBase::Show(show);
 }
 
+void SailonlineUi::UpdateDcList() {
+    if (m_ppanel->m_notebook->GetSelection() == RaceDcList)
+      FillDcList();
+}
+
 void SailonlineUi::ShowPage(const int page) {
   // TODO explain to user why it's not working
   if (m_prace == nullptr) return;
 
   // Prevent timer running outside of the Routing page
-  if (page != RaceRouting) m_tMoveBoat.Stop();
+  if (page != RaceRouting) {
+      m_tMoveBoat.Stop();
+      m_ppanel->m_pbutton_tracking->SetLabel(_("Start tracking"));
+  }
 
   switch (page) {
     case RaceDescription: {
@@ -283,13 +298,8 @@ void SailonlineUi::OnRaceSelected(wxListEvent& event) {
   // TODO Clear panel if nothing is found?
 
   // Show race description
-  m_ppanel->m_notebook->SetSelection(RaceDescription);
-}
-
-void SailonlineUi::OnPageChanged(wxBookCtrlEvent& event) {
-  if (m_prace == nullptr) return;
-
-  ShowPage(event.GetSelection());
+  m_ppanel->m_notebook->ChangeSelection(RaceDescription); // Sends no event
+  ShowPage(RaceDescription);
 }
 
 void SailonlineUi::OnStartStopTracking(wxCommandEvent&) {

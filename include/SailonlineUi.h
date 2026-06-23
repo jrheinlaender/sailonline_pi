@@ -38,6 +38,10 @@ public:
 
   bool Show(bool show);
 
+  void UpdateDcList();
+
+  std::shared_ptr<Race> GetSelectedRace() { return m_prace; }
+
 private:
   sailonline_pi& m_sailonline_pi;
 
@@ -69,7 +73,6 @@ private:
   void OnClose(wxCloseEvent&) { Hide(); }
   void OnClose(wxCommandEvent&) { Hide(); }
   void OnRaceSelected(wxListEvent& event);
-  void OnPageChanged(wxBookCtrlEvent& event);
   void OnPolarDownload(wxCommandEvent& event);
   void OnStartStopTracking(wxCommandEvent& event);
   void OnDcDownload(wxCommandEvent& event);
