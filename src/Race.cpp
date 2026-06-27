@@ -805,10 +805,12 @@ void Race::SimplifyDcs(const int max_course_delta, const int max_twa_delta) {
 namespace {
 // Course change required to reach 93% performance is ca. 100.3 degrees
 // Add 6 seconds of performance recovery at 5kn for time between course changes
-// Add 11 seconds (1 server jump) of performance recovery at 5kn for recovery after maneuver
+// Add 11 seconds (1 server jump) of performance recovery at 5kn for recovery
+// after maneuver
 // TODO Make that precise in calculation below
 // TODO Give safety margin for weather beyond next forecast
-static constexpr double max_recovery = (6.0 + 11.0) * 3.0 / (20.0 * 5.0) / 100.0;
+static constexpr double max_recovery =
+    (6.0 + 11.0) * 3.0 / (20.0 * 5.0) / 100.0;
 static constexpr double course_change_for_max_loss =
     (0.07 + max_recovery) * 180.0 / M_PI * 25.0;
 }  // namespace

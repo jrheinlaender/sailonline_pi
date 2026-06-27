@@ -97,8 +97,8 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
   // Finish
   m_ppanel->m_pracelist->SetColumnWidth(0, wxLIST_AUTOSIZE);
   m_ppanel->m_pracelist->SetColumnWidth(1, wxLIST_AUTOSIZE);
-  m_ppanel->m_pracelist->Bind(
-      wxEVT_LIST_ITEM_SELECTED, &SailonlineUi::OnRaceSelected, this);
+  m_ppanel->m_pracelist->Bind(wxEVT_LIST_ITEM_SELECTED,
+                              &SailonlineUi::OnRaceSelected, this);
 
   if (!GetSol()->GetRaces().empty())
     m_ppanel->m_pracelist->SetItemState(m_ppanel->m_pracelist->GetTopItem(),
@@ -109,15 +109,15 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
       wxEVT_NOTEBOOK_PAGE_CHANGING, [=](wxBookCtrlEvent& event) {
         // Prevent timer running outside of the Routing page
         if (event.GetSelection() != RaceRouting) {
-            m_tMoveBoat.Stop();
-            m_ppanel->m_pbutton_tracking->SetLabel(_("Start tracking"));
+          m_tMoveBoat.Stop();
+          m_ppanel->m_pbutton_tracking->SetLabel(_("Start tracking"));
         }
       });
-  m_ppanel->m_notebook->Bind(
-      wxEVT_NOTEBOOK_PAGE_CHANGED, [=](wxBookCtrlEvent& event) {
-        if (m_prace == nullptr) return;
-        ShowPage(event.GetSelection());
-      });
+  m_ppanel->m_notebook->Bind(wxEVT_NOTEBOOK_PAGE_CHANGED,
+                             [=](wxBookCtrlEvent& event) {
+                               if (m_prace == nullptr) return;
+                               ShowPage(event.GetSelection());
+                             });
 
   m_ppanel->m_notebook->SetSelection(RaceDescription);  // Show first tab
 
@@ -135,34 +135,34 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
   m_ppanel->m_pdclist->InsertColumn(6, _("Perf1"));
   m_ppanel->m_pdclist->InsertColumn(7, _("Perf2"));
 
-  m_ppanel->m_pbutton_downloadpolar->Bind(
-      wxEVT_COMMAND_BUTTON_CLICKED, &SailonlineUi::OnPolarDownload, this);
+  m_ppanel->m_pbutton_downloadpolar->Bind(wxEVT_COMMAND_BUTTON_CLICKED,
+                                          &SailonlineUi::OnPolarDownload, this);
   m_ppanel->m_pbutton_downloadpolar->Disable();
-  m_ppanel->m_pbutton_tracking->Bind(
-      wxEVT_COMMAND_BUTTON_CLICKED, &SailonlineUi::OnStartStopTracking, this);
+  m_ppanel->m_pbutton_tracking->Bind(wxEVT_COMMAND_BUTTON_CLICKED,
+                                     &SailonlineUi::OnStartStopTracking, this);
   m_ppanel->m_pspin_updateinterval->Bind(
       wxEVT_COMMAND_SPINCTRL_UPDATED, [=](wxSpinEvent& event) {
         /**
-        * Don't allow querying the server more often than every 5s
-        * Web GUI updates approx. every 10 seconds with 131 boats
-        */
+         * Don't allow querying the server more often than every 5s
+         * Web GUI updates approx. every 10 seconds with 131 boats
+         */
         m_interval_boatquery = std::max(5, event.GetValue()) * 1000;
       });
-  m_ppanel->m_pbutton_download->Bind(
-      wxEVT_COMMAND_BUTTON_CLICKED, &SailonlineUi::OnDcDownload, this);
-  m_ppanel->m_pbutton_upload->Bind(
-      wxEVT_COMMAND_BUTTON_CLICKED, &SailonlineUi::OnDcUpload, this);
-  m_ppanel->m_pbutton_fromtrack->Bind(
-      wxEVT_COMMAND_BUTTON_CLICKED, &SailonlineUi::OnDcFromTrack, this);
-  m_ppanel->m_pbutton_totrack->Bind(
-      wxEVT_COMMAND_BUTTON_CLICKED, [=](wxCommandEvent) {
-        if (m_prace == nullptr) return;
-        m_prace->MakeTrack();
-      });
-  m_ppanel->m_pbutton_copydcs->Bind(
-      wxEVT_COMMAND_BUTTON_CLICKED, &SailonlineUi::OnCopyDcs, this);
+  m_ppanel->m_pbutton_download->Bind(wxEVT_COMMAND_BUTTON_CLICKED,
+                                     &SailonlineUi::OnDcDownload, this);
+  m_ppanel->m_pbutton_upload->Bind(wxEVT_COMMAND_BUTTON_CLICKED,
+                                   &SailonlineUi::OnDcUpload, this);
+  m_ppanel->m_pbutton_fromtrack->Bind(wxEVT_COMMAND_BUTTON_CLICKED,
+                                      &SailonlineUi::OnDcFromTrack, this);
+  m_ppanel->m_pbutton_totrack->Bind(wxEVT_COMMAND_BUTTON_CLICKED,
+                                    [=](wxCommandEvent) {
+                                      if (m_prace == nullptr) return;
+                                      m_prace->MakeTrack();
+                                    });
   m_ppanel->m_pbutton_modify->Bind(wxEVT_COMMAND_BUTTON_CLICKED,
                                    &SailonlineUi::OnDcModify, this);
+  m_ppanel->m_pbutton_copydcs->Bind(wxEVT_COMMAND_BUTTON_CLICKED,
+                                    &SailonlineUi::OnCopyDcs, this);
 
   m_interval_boatquery = 30000;  // 30s
   m_tMoveBoat.Bind(
@@ -197,8 +197,8 @@ bool SailonlineUi::Show(bool show) {
 }
 
 void SailonlineUi::UpdateDcList() {
-    if (m_ppanel->m_notebook->GetSelection() == RaceDcList)
-      FillDcList();
+  if (m_ppanel->m_notebook->GetSelection() == RaceDcList) FillDcList();
+}
 }
 
 void SailonlineUi::ShowPage(const int page) {
@@ -207,8 +207,8 @@ void SailonlineUi::ShowPage(const int page) {
 
   // Prevent timer running outside of the Routing page
   if (page != RaceRouting) {
-      m_tMoveBoat.Stop();
-      m_ppanel->m_pbutton_tracking->SetLabel(_("Start tracking"));
+    m_tMoveBoat.Stop();
+    m_ppanel->m_pbutton_tracking->SetLabel(_("Start tracking"));
   }
 
   switch (page) {
@@ -299,7 +299,7 @@ void SailonlineUi::OnRaceSelected(wxListEvent& event) {
   // TODO Clear panel if nothing is found?
 
   // Show race description
-  m_ppanel->m_notebook->ChangeSelection(RaceDescription); // Sends no event
+  m_ppanel->m_notebook->ChangeSelection(RaceDescription);  // Sends no event
   ShowPage(RaceDescription);
 }
 
