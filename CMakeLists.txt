@@ -181,6 +181,7 @@ set(SRCS
     src/SailonlineUi.cpp
     src/SailonlineUiBase.cpp
     src/FromTrackDialog.cpp
+    src/DcModifyDialog.cpp
     src/Race.cpp
 )
 
@@ -191,6 +192,7 @@ set(HDRS
     include/SailonlineUi.h
     include/SailonlineUiBase.h
     include/FromTrackDialog.h
+    include/DcModifyDialog.h
     include/Race.h
 )
 

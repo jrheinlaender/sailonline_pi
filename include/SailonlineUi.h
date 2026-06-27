@@ -22,7 +22,13 @@
 
 #include <memory>
 
+#include <wx/timer.h>
+
 #include "SailonlineUiBase.h"
+
+class wxCloseEvent;
+class wxCommandEvent;
+class wxTimerEvent;
 
 class sailonline_pi;
 class Sailonline;

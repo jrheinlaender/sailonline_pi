@@ -727,7 +727,7 @@ std::pair<double, double> Race::GetBoatOptimalAngles(double tws) const {
   return {-1.0, -1.0};
 }
 
-void Race::SimplifyDcs() {
+void Race::SimplifyDcs(const int max_course_delta, const int max_twa_delta) {
   if (m_dcs.size() < 2) return;
 
   // TODO This must use the functionality already implemented in WR plugin to
@@ -756,7 +756,8 @@ void Race::SimplifyDcs() {
         first_dc->m_course, first_dc->m_twa, last_dc->m_course, last_dc->m_twa,
         dc->m_course, dc->m_twa);
 
-    if (diff_course < 2.0 && (!first_dc->m_is_twa || first_dc == last_dc)) {
+    if (diff_course < double(max_course_delta) &&
+        (!first_dc->m_is_twa || first_dc == last_dc)) {
       wxLogMessage("Continuing current leg because of minimal course change");
       first_dc->m_is_twa = false;
       if (last_dc != first_dc)
@@ -765,7 +766,8 @@ void Race::SimplifyDcs() {
         last_dc = dc;
       dc = last_dc;
       ++dc;
-    } else if (diff_twa < 1.0 && (first_dc->m_is_twa || first_dc == last_dc)) {
+    } else if (diff_twa < double(max_twa_delta) &&
+               (first_dc->m_is_twa || first_dc == last_dc)) {
       wxLogMessage("Continuing current leg because of minimal twa change");
       first_dc->m_is_twa = true;
       if (last_dc != first_dc)
@@ -777,12 +779,9 @@ void Race::SimplifyDcs() {
     } else {
       // Calculate new course / TWA
       if (first_dc != last_dc) {
-        first_dc->m_twa =
-            0.5 *
-            (first_dc->m_twa +
-             last_dc
-                 ->m_twa);  // TODO calculate exact twa that will bring us from
-                            // start to end waypoint when course is finalized
+        // TODO calculate exact twa that will bring us from
+        // start to end waypoint when course is finalized
+        first_dc->m_twa = 0.5 * (first_dc->m_twa + last_dc->m_twa);
         double new_dist;
         DistanceBearingMercator_Plugin(
             last_dc->m_lat_start, last_dc->m_lon_start, first_dc->m_lat_start,
@@ -829,9 +828,6 @@ void Race::OptimizeManeuvers() {
   for (auto p_dc = second_dc; p_dc != m_dcs.end(); ++p_dc) {
     double next_twa = p_dc->m_twa;
     double sign = first_twa > 0.0 ? 1.0 : -1.0;
-    std::cout << "      DC course" << p_dc->m_course
-              << ": Checking course change TWA=" << first_twa << " to "
-              << next_twa << std::endl;
 
     if (first_twa * next_twa > 0) {
       // Course change. Performance loss is ca. 0.07% per degree
@@ -846,6 +842,9 @@ void Race::OptimizeManeuvers() {
                -1.0, -1.0, first_twa + sign * course_change_for_max_loss,
                true});
         // ... and the existing dc finalizes the course change to next_twa
+        wxLogMessage(
+            "Splitting course change of %3.3f degrees to limit loss at 93%",
+            std::fabs(next_twa - first_twa));
       }
     } else if (std::fabs(first_twa - next_twa) > 180.0) {
       // Jibe
@@ -864,8 +863,6 @@ void Race::OptimizeManeuvers() {
        */
       double stw_before_wind = GetSpeedThroughWater(p_dc->m_tws, 180.0);
       double next_stw = GetSpeedThroughWater(p_dc->m_tws, next_twa);
-      std::cout << "Optimizing jibe, speed twa 180=" << stw_before_wind
-                << ", speed after jibe=" << next_stw << std::endl;
 
       if (next_stw > 14.0) {
         // Strategy 1
@@ -887,6 +884,8 @@ void Race::OptimizeManeuvers() {
             Dc{wxDateTime(p_dc->m_timestamp).Subtract(wxTimeSpan::Seconds(2)),
                -1.0, -1.0, sign * 180.0, true});
         // ... and the existing dc finalizes the course change to next_twa
+        wxLogMessage("Optimized jibe to %3.3f knots to limit loss at 93%",
+                     next_stw);
       } else {
         // Strategy 2
         // Performance loss for direct jibe to next_twa
@@ -928,10 +927,29 @@ void Race::OptimizeManeuvers() {
             Dc{wxDateTime(p_dc->m_timestamp).Subtract(wxTimeSpan::Seconds(2)),
                -1.0, -1.0, -sign * kTwaZero, true});
         // ... and the existing dc finalizes the course change to next_twa
+        wxLogMessage("Optimized tack to %3.3f by splitting the tack",
+                     next_speed);
       }
     }
 
     first_twa = next_twa;
+  }
+}
+
+void Race::ForceTwaNearLimits(const int max_twa_deviation) {
+  // Note: This assumes that EnrichDcs() has been called
+
+  for (auto p_dc = m_dcs.begin(); p_dc != m_dcs.end(); ++p_dc) {
+    if (p_dc->m_is_twa) continue;
+
+    if (std::fabs(p_dc->m_twa - p_dc->m_opt_upwind) < max_twa_deviation ||
+        std::fabs(p_dc->m_twa - p_dc->m_opt_downwind) < max_twa_deviation) {
+      p_dc->m_is_twa = true;
+      wxLogMessage("Changed course %3.3f to TWA %3.3f, limit is %3.3f",
+                   p_dc->m_course, p_dc->m_twa,
+                   (std::fabs(p_dc->m_twa) > 90.0 ? p_dc->m_opt_downwind
+                                                  : p_dc->m_opt_upwind));
+    }
   }
 }
 

@@ -25,6 +25,7 @@
 
 // #include <ocpn_plugin.h>
 
+#include "DcModifyDialog.h"
 #include "ocpn_plugin.h"
 #include "sailonline_pi.h"
 #include "SailonlineUi.h"
@@ -158,10 +159,10 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
         if (m_prace == nullptr) return;
         m_prace->MakeTrack();
       });
-  m_ppanel->m_pbutton_modify->Bind(
-      wxEVT_COMMAND_BUTTON_CLICKED, &SailonlineUi::OnDcModify, this);
   m_ppanel->m_pbutton_copydcs->Bind(
       wxEVT_COMMAND_BUTTON_CLICKED, &SailonlineUi::OnCopyDcs, this);
+  m_ppanel->m_pbutton_modify->Bind(wxEVT_COMMAND_BUTTON_CLICKED,
+                                   &SailonlineUi::OnDcModify, this);
 
   m_interval_boatquery = 30000;  // 30s
   m_tMoveBoat.Bind(
@@ -397,8 +398,8 @@ void SailonlineUi::OnDcFromTrack(wxCommandEvent&) {
 void SailonlineUi::OnDcModify(wxCommandEvent&) {
   if (m_prace == nullptr) return;
 
-  m_prace->SimplifyDcs();
-  m_prace->OptimizeManeuvers();
+  DcModifyDialog dlg(this);
+  dlg.ShowModal();
 
   FillDcList();
 }

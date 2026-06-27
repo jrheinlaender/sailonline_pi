@@ -97,9 +97,11 @@ public:
   /// Enrich the DC list with calculated values for diagnostic purposes
   void EnrichDcs();
   /// Try to shorten the DC list by joining legs with almost identical courses
-  void SimplifyDcs();
+  void SimplifyDcs(const int max_course_delta, const int max_twa_delta);
   /// Try to minimize performance loss when tacking and jibing
   void OptimizeManeuvers();
+  /// Enforce TWA near the optimal angles limit to avoid going past the limit
+  void ForceTwaNearLimits(const int max_twa_deviation);
   /// Create a track from the DC list
   void MakeTrack() const;
 
