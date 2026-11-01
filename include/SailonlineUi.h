@@ -93,6 +93,9 @@ private:
 
   // Shortcut to Sailonline data
   const std::shared_ptr<Sailonline> GetSol() const;
+
+  /// Log the errors from m_prace->GetErrors() and show a message box
+  void HandleErrors(const std::string& title);
 };
 
 #endif

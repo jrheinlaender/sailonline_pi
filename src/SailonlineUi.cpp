@@ -33,6 +33,18 @@
 #include "Race.h"
 #include "FromTrackDialog.h"
 
+void SailonlineUi::HandleErrors(const std::string& title) {
+  wxString errors;
+  auto error_vec = m_prace->GetErrors();
+
+  for (const auto& e : error_vec) errors = errors.append(e).append('\n');
+
+  wxLogMessage(errors.c_str());
+
+  OCPNMessageBox_PlugIn(this, errors, title, wxOK);
+  return;
+}
+
 const std::shared_ptr<Sailonline> SailonlineUi::GetSol() const {
   return m_sailonline_pi.GetSol();
 }
@@ -227,12 +239,7 @@ void SailonlineUi::ShowPage(const int page) {
     }
     case RaceInformation: {
       if (!m_prace->DownloadPolar() || !m_prace->DownloadWaypoints()) {
-        wxString errors;
-        for (const auto& e : m_prace->GetErrors())
-          errors = errors.append(e).append('\n');
-        wxLogMessage(errors.c_str());
-        OCPNMessageBox_PlugIn(this, errors,
-                              "Error downloading race information", wxOK);
+        HandleErrors("Error downloading race information");
         return;
       }
 
@@ -261,12 +268,7 @@ void SailonlineUi::ShowPage(const int page) {
     }
     case RaceRouting: {
       if (!m_prace->DownloadBoatUrl()) {
-        wxString errors;
-        for (const auto& e : m_prace->GetErrors())
-          errors = errors.append(e).append('\n');
-        wxLogMessage(errors.c_str());
-        OCPNMessageBox_PlugIn(this, errors,
-                              "Error downloading boat position URL", wxOK);
+        HandleErrors("Error downloading boat position URL");
         return;
       }
 
@@ -274,12 +276,7 @@ void SailonlineUi::ShowPage(const int page) {
       m_tMoveBoat.StartOnce();
 
       if (!m_prace->DownloadWeatherUrl()) {
-        wxString errors;
-        for (const auto& e : m_prace->GetErrors())
-          errors = errors.append(e).append('\n');
-        wxLogMessage(errors.c_str());
-        OCPNMessageBox_PlugIn(this, errors,
-                              "Error downloading weather data URL", wxOK);
+        HandleErrors("Error downloading weather data URL");
         return;
       }
 
@@ -469,12 +466,7 @@ void SailonlineUi::OnMoveBoat(wxTimerEvent&) {
     std::tie(latitude, longitude, course, speed) = m_prace->GetBoatData();
 
     if (latitude == 0.0 && longitude == 0.0 && course == 0.0 && speed == 0.0) {
-      wxString errors;
-      for (const auto& e : m_prace->GetErrors())
-        errors = errors.append(e).append('\n');
-      wxLogMessage(errors.c_str());
-      OCPNMessageBox_PlugIn(
-          this, errors, "Error downloading boat position information", wxOK);
+      HandleErrors("Error downloading boat position information");
       return;
     }
 
