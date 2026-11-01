@@ -174,7 +174,17 @@ bool Race::CallCurl(CURL* curl) {
 }
 
 std::string Race::GetUrl(const std::string& url, const wxFileName& target,
-                         const std::string& message) {
+                         const bool use_cached, const std::string& message) {
+  if (target.Exists(wxFILE) && use_cached) {
+    wxLogMessage("Reading already downloaded file %s",
+                 target.GetFullPath().c_str());
+    wxString data;
+    wxFile data_file(target.GetFullPath(), wxFile::read);
+    data_file.ReadAll(&data);
+    data_file.Close();
+    return data.ToStdString();
+  }
+
   if (!(OCPN_downloadFile(
             SetPlaceholders(url), target.GetFullPath(), "Downloading", message,
             wxBitmap(), m_sailonline_pi.GetParentWindow(),
@@ -298,8 +308,7 @@ wxString Race::GetRaceInfo() {
   wxString result;
 
   // Check if raceinfo was already downloaded
-  wxFileName raceinfo =
-      m_sailonline_pi.GetDataDir(wxString::Format("Race_%s", m_id.c_str()));
+  wxFileName raceinfo = m_sailonline_pi.GetDataDir("Race_" + m_id);
   raceinfo.SetFullName(wxString::Format("auth_raceinfo_%s.xml", m_id.c_str()));
   if (!raceinfo.Exists()) {
     Login();
@@ -311,7 +320,8 @@ wxString Race::GetRaceInfo() {
     }
 
     wxLogMessage("Downloading auth_raceinfo_%s.xml", m_id.c_str());
-    result = GetUrl(SolApi::kSolRaceXmlUrl, raceinfo, "Finding race token");
+    result =
+        GetUrl(SolApi::kSolRaceXmlUrl, raceinfo, false, "Finding race token");
     wxLogMessage("Cached raceinfo to auth_raceinfo_%s.xml", m_id.c_str());
   } else {
     wxLogMessage("Reading cached auth_raceinfo_%s.xml", m_id.c_str());
@@ -510,11 +520,10 @@ std::tuple<double, double, double, double> Race::GetBoatData() {
     return {};
   }
 
-  wxFileName boatdata_fn =
-      m_sailonline_pi.GetDataDir(wxString::Format("Race_%s", m_id.c_str()));
+  wxFileName boatdata_fn = m_sailonline_pi.GetDataDir("Race_" + m_id);
   boatdata_fn.SetFullName("boat.xml");
   std::string boatdata =
-      GetUrl(SolApi::kSolBoatDataUrl, boatdata_fn, "Finding boat data");
+      GetUrl(SolApi::kSolBoatDataUrl, boatdata_fn, true, "Finding boat data");
   if (boatdata.empty()) return {};
 
   pugi::xml_document boatdata_doc;
@@ -572,8 +581,7 @@ std::time_t Race::GetWeatherData() {
     return {};
   }
 
-  wxFileName weatherdata_fn =
-      m_sailonline_pi.GetDataDir(wxString::Format("Race_%s", m_id.c_str()));
+  wxFileName weatherdata_fn = m_sailonline_pi.GetDataDir("Race_" + m_id);
   weatherdata_fn.SetFullName(
       wxString::Format("weatherinfo_%s.xml", m_id.c_str()));
   std::string weatherdata = GetUrl(SolApi::kSolWeatherDataUrl, weatherdata_fn,
@@ -609,11 +617,15 @@ std::time_t Race::GetWeatherData() {
   std::istringstream ss(node.first_child().value());
   ss >> std::get_time(&tm, "%Y/%M/%D %H:%M:%S");
 
-  wxFileName grib_fn = m_sailonline_pi.GetDataDir(
-      wxString::Format("Race_%s/Weather", m_id.c_str()));
+  wxFileName grib_fn = m_sailonline_pi.GetDataDir("Race_" + m_id + "/Weather");
   grib_fn.SetFullName(grib_name);
-  std::string gribdata = GetUrl(grib_url, grib_fn, "Finding grib data");
-  if (gribdata.empty()) return {};
+  std::string gribdata =
+      GetUrl(m_weatherdata_url, grib_fn, true, "Finding grib data");
+
+  if (gribdata.empty()) {
+    m_errors.emplace_back("No grib data found at " + m_weatherdata_url);
+    return false;
+  }
 
   /**
    * The downloaded xml file has the following information:

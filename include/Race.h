@@ -148,7 +148,7 @@ private:
 
   /// Download data from a URL using the OCPN_downloadFile
   std::string GetUrl(const std::string& url, const wxFileName& target,
-                     const std::string& message);
+                     const bool use_cached, const std::string& message);
 
   /// Convencience function for placeholders in URLs
   std::string SetPlaceholders(const std::string& input) const;

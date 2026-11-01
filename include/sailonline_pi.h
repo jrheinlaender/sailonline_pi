@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2025 by Jan Rheinländer                               *
+ *   Copyright (C) 2025 by Jan Rheinlï¿½nder                               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -114,7 +114,7 @@ public:
 
   /// Return path of directory where all SOL-related data is stored.
   // Optionally append and create a subdirectory
-  wxFileName GetDataDir(const wxString& subdir = "") const;
+  wxFileName GetDataDir(const std::string& subdir = "") const;
 
   Json::Value GetJsonMessage() const;
 

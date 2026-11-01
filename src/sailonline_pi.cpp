@@ -206,14 +206,21 @@ void sailonline_pi::OnToolbarToolCallback(int) {
   m_pui->Show(!m_pui->IsShown());
 }
 
-wxFileName sailonline_pi::GetDataDir(const wxString& subdir) const {
+wxFileName sailonline_pi::GetDataDir(const std::string& subdir) const {
   wxFileName result;
   result.SetPath(GetPluginDataDir("sailonline_pi"));
   result.AppendDir("data");
   if (!result.DirExists()) result.Mkdir();
-  if (!subdir.IsEmpty()) {
-    result.AppendDir(subdir);
-    if (!result.DirExists()) result.Mkdir();
+  if (!subdir.empty()) {
+    size_t pos = 0;
+    size_t nextpos = 0;
+
+    do {
+      nextpos = subdir.find('/', pos);
+      result.AppendDir(subdir.substr(pos, nextpos - pos));
+      if (!result.DirExists()) result.Mkdir();
+      pos = nextpos + 1;
+    } while (nextpos != std::string::npos);
   }
 
   return result;
