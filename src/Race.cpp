@@ -18,7 +18,7 @@
  ***************************************************************************/
 
 #include <sstream>
-#include <iomanip>
+#include <chrono>
 
 #include <wx/wx.h>
 
@@ -31,7 +31,8 @@
 #include "Race.h"
 #include "SolApi.h"
 
-Race::Race(sailonline_pi& plugin) : m_sailonline_pi(plugin) {}
+Race::Race(sailonline_pi& plugin)
+    : m_weather_stamp{}, m_sailonline_pi(plugin) {}
 
 Race::~Race() {}
 
@@ -336,15 +337,39 @@ wxString Race::GetRaceInfo() {
     return {};
   }
 
-  // Available information
-  // tag <url>:
-  // https://www.sailonline.org/webclient/race_1967.xml?token=<TOKEN>
-  //    zlib-compressed xml file containing data about every boat in the race
-  //    From bash do printf "\x1f\x8b\x08\x00\x00\x00\x00\x00" |cat -
-  //    race_1967.xml |gzip -dc|more
-  // tag <traceUrl>:
-  // https://www.sailonline.org/webclient/traces_1967.xml?token=<TOKEN>
-  //    zlib-compressed xml file containing tracks of all boats?
+  /**
+   * Format of the raceinfo file (the first part corresponds to racelist file)
+   * <race>
+   *   <id>2067</id>
+   *   <name>PIC Coastal Classic Yacht Race 2026</name>
+   *   <description>...</description>
+   *   <message>Practice sailing. Race starts 23/10-22.30UTC. Currently 38 boats
+   * registered.</message> <race_type></race_type> <start_time>Oct. 23, 2026,
+   * 10:30 p.m.</start_time> <archived>False</archived> <minlon>173.0</minlon>
+   *   <maxlon>178.0</maxlon>
+   *   <minlat>-38.0</minlat>
+   *   <maxlat>-34.0</maxlat>
+   *
+   *   <tilemap>h</tilemap>
+   *   <url>/webclient/race_2067.xml</url>
+   *     # https://www.sailonline.org/webclient/race_1967.xml?token=<TOKEN>
+   *     # zlib-compressed xml file containing data about every boat in the race
+   *     # From bash do printf "\x1f\x8b\x08\x00\x00\x00\x00\x00" |cat -
+   *     # race_1967.xml |gzip -dc|more
+   *     # Or use zlib-flate -uncompress < race1967.xml > race1967_flate.xml
+   *   <weatherurl>/webclient/weatherinfo_133.xml</weatherurl>
+   *   <traceUrl>/webclient/traces_133.xml</traceUrl>
+   *     # https://www.sailonline.org/webclient/traces_1967.xml?token=<TOKEN>
+   *     # zlib-compressed xml file containing tracks of all boats?
+   *   <course> see DownloadWaypoints() </course>
+   *   <boaturl>/webclient/boat.xml</boaturl>
+   *   <boat> see DownloadPolar() </boat>
+   *   <chatrooms>
+   *     <chatroom id="1" name="English" />
+   *     ...
+   *   </chatrooms>
+   * </race>
+   */
 
   return result;
 }
@@ -491,14 +516,12 @@ bool Race::DownloadWeatherUrl() {
   pugi::xml_document race_doc;
   auto status = race_doc.load_string(GetRaceInfo());
   if (!status) {
-    m_errors.emplace_back("Could not parse race file: %s",
+    m_errors.emplace_back(std::string("Could not parse race file: ") +
                           status.description());
     return false;
   }
 
-  pugi::xml_node node_url = race_doc.select_node("/race/weatherurl").node();
-  m_weather_url = node_url.first_child().value();
-
+  m_weather_url = pugi_get_string(race_doc, "/race/weatherurl");
   return true;
 }
 
@@ -572,32 +595,32 @@ std::tuple<double, double, double, double> Race::GetBoatData() {
   return {latitude, longitude, course, speed};
 }
 
-std::time_t Race::GetWeatherData() {
+bool Race::GetWeatherInfo() {
   Login();
 
   if (m_sol_token.empty()) {
     m_errors.emplace_back("Not logged into race " + m_id +
                           ", did you register?");
-    return {};
+    return false;
   }
 
   wxFileName weatherdata_fn = m_sailonline_pi.GetDataDir("Race_" + m_id);
   weatherdata_fn.SetFullName(
       wxString::Format("weatherinfo_%s.xml", m_id.c_str()));
   std::string weatherdata = GetUrl(SolApi::kSolWeatherDataUrl, weatherdata_fn,
-                                   "Finding weather data");
+                                   false, "Finding weather data");
   if (weatherdata.empty()) {
     m_errors.emplace_back("No weather data found at " +
                           SetPlaceholders(SolApi::kSolWeatherDataUrl));
-    return {};
+    return false;
   }
 
   pugi::xml_document weatherdata_doc;
   auto status = weatherdata_doc.load_string(weatherdata.c_str());
   if (!status) {
-    m_errors.emplace_back("Could not parse weather data file: %s",
+    m_errors.emplace_back(std::string("Could not parse weather data file: ") +
                           status.description());
-    return {};
+    return false;
   }
 
   /**
@@ -609,13 +632,18 @@ std::time_t Race::GetWeatherData() {
    * </weatherinfo>
    */
 
-  pugi::xml_node node = weatherdata_doc.select_node("/weatherinfo/url").node();
-  std::string grib_url = node.first_child().value();
-  std::string grib_name = grib_url.substr(grib_url.find_last_of("/") + 1);
-  node = weatherdata_doc.select_node("/weatherinfo/last_updated").node();
-  struct std::tm tm;
-  std::istringstream ss(node.first_child().value());
-  ss >> std::get_time(&tm, "%Y/%M/%D %H:%M:%S");
+  m_weather_stamp = pugi_get_time(weatherdata_doc, "/weatherinfo/last_updated");
+  m_weatherdata_url = pugi_get_string(weatherdata_doc, "/weatherinfo/url");
+  return true;
+}
+
+bool Race::GetWeatherData() {
+  if (m_weather_stamp == timestamp{} || m_weatherdata_url.empty()) {
+    m_errors.emplace_back(
+        "No weather forecast exists, did you register in race?");
+    return false;
+  }
+
 
   wxFileName grib_fn = m_sailonline_pi.GetDataDir("Race_" + m_id + "/Weather");
   grib_fn.SetFullName(grib_name);
@@ -624,6 +652,14 @@ std::time_t Race::GetWeatherData() {
 
   if (gribdata.empty()) {
     m_errors.emplace_back("No grib data found at " + m_weatherdata_url);
+    return false;
+  }
+
+  pugi::xml_document gribdata_doc;
+  auto status = gribdata_doc.load_string(gribdata.c_str());
+  if (!status) {
+    m_errors.emplace_back(std::string("Could not parse grib data file: ") +
+                          status.description());
     return false;
   }
 
@@ -643,8 +679,11 @@ std::time_t Race::GetWeatherData() {
    *    lat_increment="0.5">
    *   <frames>
    *     <frame target_time="2026/02/22 09:00:00">
-   *       <U>5.346 4.846 ... -4.734;</U/>
-   *       <V>-7.146 -4.946 ... 2.374;<V>
+   *       <U>5.346 4.846 ... -4.734 (lat_n_points values);
+   *          -4.893 ... -4.773;
+   *           ... (lon_n_points sets)
+   *       </U/>
+   *       <V>-7.146 -4.946 ... 2.374; ...<V>
    *     </frame>
    *     ...
    *   </frames>
@@ -652,7 +691,135 @@ std::time_t Race::GetWeatherData() {
    */
 
   // Convert xml to grib format
-  return mktime(&tm);
+  pugi::xml_node weathersystem =
+      gribdata_doc.select_node("/weathersystem").node();
+  if (pugi_get_time(weathersystem, "last_updated") != m_weather_stamp) {
+    m_errors.emplace_back(
+        "Weather data mismatch: Was weather updated just now? Try again");
+    return false;
+  }
+
+  timestamp issue_time = pugi_get_time(weathersystem, "issue_time");
+  double lon_min = weathersystem.attribute("lon_min").as_double(0.0);
+  double lon_max = weathersystem.attribute("lon_max").as_double(0.0);
+  double lat_min = weathersystem.attribute("lat_min").as_double(0.0);
+  double lat_max = weathersystem.attribute("lat_max").as_double(0.0);
+  int lon_num = weathersystem.attribute("lon_n_points").as_int(0);
+  double lon_inc = weathersystem.attribute("lon_increment").as_int(0);
+  int lat_num = weathersystem.attribute("lat_n_points").as_int(0);
+  double lat_inc = weathersystem.attribute("lat_increment").as_int(0);
+  if (lon_min == lon_max || lat_min == lat_max || lon_num == 0 ||
+      lon_inc == 0 || lat_num == 0 || lat_inc == 0) {
+    m_errors.push_back(
+        "Invalid grib data: Could not read longitude and latitude values");
+    return false;
+  }
+  // Note: X-component = U-Component = West-East = Longitude = Ni = Di
+  pugi::xml_node node_frames =
+      gribdata_doc.select_node("/weathersystem/frames").node();
+  int frame = 0;
+  std::vector<HostApi123::MeteoRecordSet> v_record_set;
+
+  for (pugi::xml_node node_frame = node_frames.first_child();
+       node_frame != nullptr; ) {
+    if (strcmp(node_frame.name(), "frame") != 0)
+      continue;
+
+    timestamp frame_time = pugi_get_time(node_frame, "target_time");
+    pugi::xml_node node_u = node_frame.first_child();
+    pugi::xml_node node_v = node_u.next_sibling();
+    if (strcmp(node_u.name(), "U") != 0 || strcmp(node_v.name(), "V") != 0) {
+      m_errors.push_back("Invalid grib data: Syntax error in U-V-data");
+      return false;
+    }
+
+    int i = 0;
+    int j = 0;
+
+    std::stringstream u_stream(node_u.first_child().value());
+    std::stringstream v_stream(node_v.first_child().value());
+    double* u_raw = new double[lat_num * lon_num];
+    double* v_raw = new double[lat_num * lon_num];
+    std::string u_str;
+    std::string v_str;
+
+    while (u_stream >> u_str && v_stream >> v_str) {
+      try {
+        double u = std::stod(u_str);
+        double v = std::stod(v_str);
+        u_raw[j * lon_num + i] = u;
+        v_raw[j * lon_num + i] = v; // data[j * Ni + i]
+      } catch (const std::exception& e) {
+        m_errors.emplace_back(
+            "Format error in U-V wind data at i=" + std::to_string(i) +
+            " (lon) and j=" + std::to_string(j) + " (lat)" +
+            ": Wind speed is not a valid double (" + e.what() + ")");
+        delete[] u_raw;
+        delete[] v_raw;
+        return false;
+      }
+
+      ++j;
+      if (j >= lat_num) {
+        j = 0;
+        ++i;
+      }
+
+      if (i >= lon_num) {
+        if (u_stream.eof() && v_stream.eof()) break;
+
+        m_errors.emplace_back("Invalid grib data: Too many data points");
+        delete[] u_raw;
+        delete[] v_raw;
+        return false;
+      }
+    }
+
+    if (i < lon_num) {
+      m_errors.emplace_back("Invalid grib data: Not enough data points");
+      delete[] u_raw;
+      delete[] v_raw;
+      return false;
+    }
+
+    // Note: Ownership of raw data is transferred here
+    HostApi123::MeteoRecord u_record{
+      issue_time, frame_time,
+      lat_min, lon_min, lat_max, lon_max, lat_num, lon_num, lat_inc, lon_inc,
+      HostApi123::MeteoRecord::WIND_VX, u_raw
+    };
+    HostApi123::MeteoRecord v_record{
+      issue_time, frame_time,
+      lat_min, lon_min, lat_max, lon_max, lat_num, lon_num, lat_inc, lon_inc,
+      HostApi123::MeteoRecord::WIND_VY, v_raw
+    };
+    HostApi123::MeteoRecordSet* p_record_set = new HostApi123::MeteoRecordSet{frame_time};
+    p_record_set->Add(HostApi123::MeteoRecord::WIND_VX, std::move(u_record));
+    p_record_set->Add(HostApi123::MeteoRecord::WIND_VY, std::move(v_record));
+
+    // Check if we are at last frame
+    node_frame = node_frame.next_sibling();
+
+    // Send data to grib_pi
+    Json::Value v;
+    Json::FastWriter writer;
+
+    v["Source"] = "SAILONLINE_PI";
+    v["Type"] = "Request";
+    v["Msg"] = "APPLY_METEO_TIMELINE_RECORD";
+    v["Action"] = (frame == 0 ? "Clear" :
+                    (node_frame == nullptr ? "Finish" : "Append")
+                  );
+    char ptr[64];
+    snprintf(ptr, sizeof ptr, "%p", (void*)p_record_set);
+    v["MeteoRecordSetPtr"] = ptr;
+
+    SendPluginMessage("APPLY_METEO_TIMELINE_RECORD", writer.write(v));
+
+    ++frame;
+  }
+
+  return true;
 }
 
 std::pair<double, double> Race::GetWindData(const wxDateTime& time, double lat,

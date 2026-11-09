@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <sstream>
+#include <format>
 
 #include <wx-3.2/wx/event.h>
 #include <wx/wx.h>
@@ -150,6 +151,9 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
   m_ppanel->m_pbutton_downloadpolar->Bind(wxEVT_COMMAND_BUTTON_CLICKED,
                                           &SailonlineUi::OnPolarDownload, this);
   m_ppanel->m_pbutton_downloadpolar->Disable();
+  m_ppanel->m_pbutton_downloadweather->Bind(
+      wxEVT_COMMAND_BUTTON_CLICKED, &SailonlineUi::OnWeatherDownload, this);
+  m_ppanel->m_pbutton_downloadweather->Disable();
   m_ppanel->m_pbutton_tracking->Bind(wxEVT_COMMAND_BUTTON_CLICKED,
                                      &SailonlineUi::OnStartStopTracking, this);
   m_ppanel->m_pspin_updateinterval->Bind(
@@ -246,6 +250,23 @@ void SailonlineUi::ShowPage(const int page) {
       m_ppanel->m_polarname->SetLabel(m_prace->m_polarfile);
       m_ppanel->m_pbutton_downloadpolar->Enable(true);
 
+      /**
+       * Weather data is acquired in several steps
+       * 1. Extract weatherurl from the race info file:
+       * m_prace->DownloadWeatherUrl()
+       * 2. Download the weatherinfo_XXX.xml file: m_prace->GetWeatherInfo()
+       * 3. Extract Grib data url from this file: m_prace->m_weatherdata_url
+       * 4. Download grib data: m_prace->GetWeatherData()
+       */
+      if (!m_prace->DownloadWeatherUrl() || !m_prace->GetWeatherInfo()) {
+        HandleErrors("Error downloading weather information");
+        return;
+      }
+
+      if (m_prace->m_weather_stamp != timestamp{}) {
+        m_ppanel->m_weather_stamp->SetLabel(
+            std::format("{:%c}", m_prace->m_weather_stamp));
+        m_ppanel->m_pbutton_downloadweather->Enable(true);
       for (const auto& wp : m_prace->GetWaypoints()) {
         wxListItem item;
         long index = m_ppanel->m_pwaypointlist->InsertItem(
@@ -312,6 +333,10 @@ void SailonlineUi::OnStartStopTracking(wxCommandEvent&) {
 }
 
 void SailonlineUi::OnPolarDownload(wxCommandEvent&) {}
+
+void SailonlineUi::OnWeatherDownload(wxCommandEvent&) {
+  if (!m_prace->GetWeatherData()) HandleErrors("Error in weather data");
+}
 
 void SailonlineUi::OnDcDownload(wxCommandEvent&) {}
 void SailonlineUi::OnDcUpload(wxCommandEvent&) {}

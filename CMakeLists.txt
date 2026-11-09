@@ -116,7 +116,8 @@ set(XML_DESCRIPTION ${LONG_DESCRIPTION})
 
 option(PLUGIN_USE_SVG "Use SVG graphics" ON)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set (CMAKE_EXPORT_COMPILE_COMMANDS yes)
 
 # Use local version of GLU library requires libs/glu directory

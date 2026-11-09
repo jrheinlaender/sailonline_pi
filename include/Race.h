@@ -23,7 +23,7 @@
 #include <list>
 #include <string>
 #include <memory>
-#include <ctime>
+#include <chrono>
 
 #include <wx/datetime.h>
 #include <wx/filename.h>
@@ -31,6 +31,8 @@
 typedef void CURL;
 class PlugIn_Waypoint;
 class sailonline_pi;
+
+typedef std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> timestamp;
 
 /**
  * Class that handles SOL delayed commands
@@ -67,6 +69,8 @@ public:
   std::string m_url;  // Where to find boat position etc.
   std::string m_weather_url;
   std::string m_polarfile;
+  timestamp m_weather_stamp;      // Last forecast time
+  std::string m_weatherdata_url;  // Data of last forecast
 
   /// Return error messages and clear the error store
   std::vector<std::string> GetErrors();
@@ -91,8 +95,11 @@ public:
   /// Get latitude, longitude, course and speed over ground of boat
   std::tuple<double, double, double, double> GetBoatData();
 
-  /// Get weather data and save it to a file. Return start time of forecast
-  std::time_t GetWeatherData();
+  /// Get information about last forecast (stored in m_weather_stamp)
+  bool GetWeatherInfo();
+
+  /// Get weather data and send it to grib_pi
+  bool GetWeatherData();
 
   /// Enrich the DC list with calculated values for diagnostic purposes
   void EnrichDcs();

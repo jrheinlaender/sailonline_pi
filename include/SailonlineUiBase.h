@@ -88,6 +88,7 @@ protected:
   wxPanel* m_panel11;
   wxPanel* m_panel12;
   wxStaticText* m_staticText168;
+  wxStaticText* m_staticText251;
   wxStaticText* m_staticText170;
   wxPanel* m_dcs;
   wxPanel* m_routing;
@@ -103,6 +104,7 @@ protected:
   virtual void OnLeftUp(wxMouseEvent& event) { event.Skip(); }
   virtual void OnLeftDown(wxMouseEvent& event) { event.Skip(); }
   virtual void OnPositionKeyDown(wxListEvent& event) { event.Skip(); }
+  virtual void OnWeatherDownload(wxCommandEvent& event) { event.Skip(); }
   virtual void OnEditConfigurationClick(wxMouseEvent& event) { event.Skip(); }
   virtual void OnWeatherRoutesListLeftDown(wxMouseEvent& event) {
     event.Skip();
@@ -126,6 +128,8 @@ public:
   wxPanel* m_raceinfo;
   wxStaticText* m_polarname;
   wxButton* m_pbutton_downloadpolar;
+  wxStaticText* m_weather_stamp;
+  wxButton* m_pbutton_downloadweather;
   wxListCtrl* m_pwaypointlist;
   wxListCtrl* m_pdclist;
   wxButton* m_pbutton_download;

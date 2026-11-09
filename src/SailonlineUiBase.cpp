@@ -221,6 +221,36 @@ SailonlinePanel::SailonlinePanel(wxWindow* parent, wxWindowID id,
 
   bSizer11->Add(bSizer16, 1, wxALL | wxEXPAND, 5);
 
+  wxBoxSizer* bSizer122;
+  bSizer122 = new wxBoxSizer(wxHORIZONTAL);
+
+  m_staticText251 =
+      new wxStaticText(m_raceinfo, wxID_ANY, _("Last weather forecast"),
+                       wxDefaultPosition, wxDefaultSize, 0);
+  m_staticText251->Wrap(-1);
+  m_staticText251->SetFont(wxFont(11, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL,
+                                  wxFONTWEIGHT_BOLD, false, wxEmptyString));
+
+  bSizer122->Add(m_staticText251, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
+
+  m_weather_stamp =
+      new wxStaticText(m_raceinfo, wxID_ANY, _("not loaded"), wxDefaultPosition,
+                       wxDefaultSize, wxALIGN_LEFT);
+  m_weather_stamp->Wrap(-1);
+  m_weather_stamp->SetFont(wxFont(wxNORMAL_FONT->GetPointSize(),
+                                  wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL,
+                                  wxFONTWEIGHT_NORMAL, false, wxEmptyString));
+
+  bSizer122->Add(m_weather_stamp, 1, wxALIGN_CENTER_VERTICAL | wxALL, 5);
+
+  m_pbutton_downloadweather = new wxButton(m_raceinfo, wxID_ANY, _("Download"),
+                                           wxDefaultPosition, wxDefaultSize, 0);
+  bSizer122->Add(m_pbutton_downloadweather, 0, wxALIGN_CENTER_VERTICAL | wxALL,
+                 5);
+
+  bSizer122->Add(0, 0, 1, wxEXPAND, 5);
+
+  bSizer11->Add(bSizer122, 1, wxALL | wxEXPAND, 5);
   wxBoxSizer* bSizer121;
   bSizer121 = new wxBoxSizer(wxVERTICAL);
 
@@ -427,6 +457,9 @@ SailonlinePanel::SailonlinePanel(wxWindow* parent, wxWindowID id,
   m_pracelist->Connect(wxEVT_COMMAND_LIST_KEY_DOWN,
                        wxListEventHandler(SailonlinePanel::OnPositionKeyDown),
                        NULL, this);
+  m_pbutton_downloadweather->Connect(
+      wxEVT_COMMAND_BUTTON_CLICKED,
+      wxCommandEventHandler(SailonlinePanel::OnWeatherDownload), NULL, this);
   m_pdclist->Connect(
       wxEVT_LEFT_DCLICK,
       wxMouseEventHandler(SailonlinePanel::OnEditConfigurationClick), NULL,
@@ -478,6 +511,9 @@ SailonlinePanel::~SailonlinePanel() {
   m_pracelist->Disconnect(
       wxEVT_COMMAND_LIST_KEY_DOWN,
       wxListEventHandler(SailonlinePanel::OnPositionKeyDown), NULL, this);
+  m_pbutton_downloadweather->Disconnect(
+      wxEVT_COMMAND_BUTTON_CLICKED,
+      wxCommandEventHandler(SailonlinePanel::OnWeatherDownload), NULL, this);
   m_pdclist->Disconnect(
       wxEVT_LEFT_DCLICK,
       wxMouseEventHandler(SailonlinePanel::OnEditConfigurationClick), NULL,

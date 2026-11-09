@@ -80,6 +80,7 @@ private:
   void OnClose(wxCommandEvent&) { Hide(); }
   void OnRaceSelected(wxListEvent& event);
   void OnPolarDownload(wxCommandEvent& event);
+  void OnWeatherDownload(wxCommandEvent& event);
   void OnStartStopTracking(wxCommandEvent& event);
   void OnDcDownload(wxCommandEvent& event);
   void OnDcUpload(wxCommandEvent& event);
