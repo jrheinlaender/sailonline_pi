@@ -374,6 +374,40 @@ wxString Race::GetRaceInfo() {
   return result;
 }
 
+// Auxiliary methods for evaluating xml nodes
+namespace {
+std::string pugi_get_string(const pugi::xml_document& doc,
+                            const std::string& path) {
+  pugi::xml_node node = doc.select_node(path.c_str()).node();
+  return node.first_child().value();
+}
+
+double pugi_get_double(const pugi::xml_document& doc, const std::string& path,
+                       std::string& err_msg) {
+  pugi::xml_node node = doc.select_node(path.c_str()).node();
+  try {
+    return std::stod(node.first_child().value());
+  } catch (const std::invalid_argument& err) {
+    err_msg = "Could not convert '" + path + "' to double";
+    return {};
+  }
+}
+
+timestamp pugi_get_time(const pugi::xml_document& doc,
+                        const std::string& path) {
+  pugi::xml_node node = doc.select_node(path.c_str()).node();
+  std::istringstream ss(node.first_child().value());
+  timestamp result;
+  std::chrono::from_stream(ss, "%Y/%m/%d %H:%M:%S", result);
+  return result;
+}
+
+timestamp pugi_get_time(const pugi::xml_node& node, const std::string& attr) {
+  std::istringstream ss(node.attribute(attr.c_str()).as_string());
+  timestamp result;
+  std::chrono::from_stream(ss, "%Y/%m/%d %H:%M:%S", result);
+  return result;
+}
 bool Race::DownloadPolar() {
   pugi::xml_document race_doc;
   auto status = race_doc.load_string(GetRaceInfo());
@@ -399,7 +433,7 @@ bool Race::DownloadPolar() {
    */
 
   // Get boat polar
-  pugi::xml_node node_name = race_doc.select_node("/race/boat/vpp/name").node();
+  // TODO Use spline interpolation as indicated by XML format
   pugi::xml_node node_tws =
       race_doc.select_node("/race/boat/vpp/tws_splined").node();
   pugi::xml_node node_twa =
@@ -408,7 +442,7 @@ bool Race::DownloadPolar() {
       race_doc.select_node("/race/boat/vpp/bs_splined").node();
 
   // Write polar to .csv file for import into weather routing plugin
-  std::string polar_name(node_name.first_child().value());
+  std::string polar_name = pugi_get_string(race_doc, "/race/boat/vpp/name");
   std::replace(polar_name.begin(), polar_name.end(), ' ', '_');
   wxFileName download_target = m_sailonline_pi.GetDataDir("Polar");
   download_target.SetFullName(
@@ -532,9 +566,7 @@ bool Race::DownloadBoatUrl() {
     return false;
   }
 
-  pugi::xml_node node_url = race_doc.select_node("/race/boaturl").node();
-  m_url = node_url.first_child().value();
-
+  m_url = pugi_get_string(race_doc, "/race/boaturl");
   return true;
 }
 
@@ -609,14 +641,16 @@ std::tuple<double, double, double, double> Race::GetBoatData() {
    * </data>
    */
 
-  pugi::xml_node node = boatdata_doc.select_node("/data/boat/lat").node();
-  double latitude = std::stod(node.first_child().value());
-  node = boatdata_doc.select_node("/data/boat/lon").node();
-  double longitude = std::stod(node.first_child().value());
-  node = boatdata_doc.select_node("/data/boat/cog").node();
-  double course = std::stod(node.first_child().value()) / M_PI * 180.0;
-  node = boatdata_doc.select_node("/data/boat/sog").node();
-  double speed = std::stod(node.first_child().value());
+  std::string err_msg{""};
+  double latitude = pugi_get_double(boatdata_doc, "/data/boat/lat", err_msg);
+  double longitude = pugi_get_double(boatdata_doc, "/data/boat/lon", err_msg);
+  double course =
+      pugi_get_double(boatdata_doc, "/data/boat/cog", err_msg) / M_PI * 180.0;
+  double speed = pugi_get_double(boatdata_doc, "/data/boat/sog", err_msg);
+  if (!err_msg.empty()) {
+    m_errors.push_back("Invalid boat data: " + err_msg);
+    return {};
+  }
 
   return {latitude, longitude, course, speed};
 }
