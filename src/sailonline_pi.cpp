@@ -57,7 +57,7 @@ sailonline_pi::sailonline_pi(void* ppimgr) : opencpn_plugin_123(ppimgr) {
   wxFileName icon_filename(GetDataDir());
   wxLogDebug(wxString("Using icon path: %s", icon_filename.GetFullPath()));
 
-  wxImage::AddHandler(new wxPNGHandler);
+  // Note: wxPNGHandler appears to be installed by default
 
   icon_filename.SetFullName("sailonline_pi.png");
   wxImage plugin_icon(icon_filename.GetFullPath());

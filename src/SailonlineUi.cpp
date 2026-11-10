@@ -119,7 +119,7 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
                                         wxLIST_STATE_SELECTED);
 
   m_ppanel->m_notebook->Bind(
-      wxEVT_NOTEBOOK_PAGE_CHANGING, [=](wxBookCtrlEvent& event) {
+      wxEVT_NOTEBOOK_PAGE_CHANGING, [this](wxBookCtrlEvent& event) {
         // Prevent timer running outside of the Routing page
         if (event.GetSelection() != RaceRouting) {
           m_tMoveBoat.Stop();
@@ -127,7 +127,7 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
         }
       });
   m_ppanel->m_notebook->Bind(wxEVT_NOTEBOOK_PAGE_CHANGED,
-                             [=](wxBookCtrlEvent& event) {
+                             [this](wxBookCtrlEvent& event) {
                                if (m_prace == nullptr) return;
                                ShowPage(event.GetSelection());
                              });
@@ -157,7 +157,7 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
   m_ppanel->m_pbutton_tracking->Bind(wxEVT_COMMAND_BUTTON_CLICKED,
                                      &SailonlineUi::OnStartStopTracking, this);
   m_ppanel->m_pspin_updateinterval->Bind(
-      wxEVT_COMMAND_SPINCTRL_UPDATED, [=](wxSpinEvent& event) {
+      wxEVT_COMMAND_SPINCTRL_UPDATED, [this](wxSpinEvent& event) {
         /**
          * Don't allow querying the server more often than every 5s
          * Web GUI updates approx. every 10 seconds with 131 boats
@@ -171,7 +171,7 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
   m_ppanel->m_pbutton_fromtrack->Bind(wxEVT_COMMAND_BUTTON_CLICKED,
                                       &SailonlineUi::OnDcFromTrack, this);
   m_ppanel->m_pbutton_totrack->Bind(wxEVT_COMMAND_BUTTON_CLICKED,
-                                    [=](wxCommandEvent) {
+                                    [this](wxCommandEvent) {
                                       if (m_prace == nullptr) return;
                                       m_prace->MakeTrack();
                                     });
@@ -181,8 +181,7 @@ SailonlineUi::SailonlineUi(wxWindow* parent, sailonline_pi& plugin)
                                     &SailonlineUi::OnCopyDcs, this);
 
   m_interval_boatquery = 30000;  // 30s
-  m_tMoveBoat.Bind(
-      wxEVT_TIMER, &SailonlineUi::OnMoveBoat, this);
+  m_tMoveBoat.Bind(wxEVT_TIMER, &SailonlineUi::OnMoveBoat, this);
 }
 
 SailonlineUi::~SailonlineUi() {
@@ -267,6 +266,10 @@ void SailonlineUi::ShowPage(const int page) {
         m_ppanel->m_weather_stamp->SetLabel(
             std::format("{:%c}", m_prace->m_weather_stamp));
         m_ppanel->m_pbutton_downloadweather->Enable(true);
+      }
+
+      m_ppanel->m_pwaypointlist->DeleteAllItems();
+
       for (const auto& wp : m_prace->GetWaypoints()) {
         wxListItem item;
         long index = m_ppanel->m_pwaypointlist->InsertItem(
@@ -373,6 +376,16 @@ void SailonlineUi::FillDcList() {
         index, 6, wxString::Format("%03.3f", dc->m_perf_begin * 100.0));
     m_ppanel->m_pdclist->SetItem(
         index, 7, wxString::Format("%03.3f", dc->m_perf_end * 100.0));
+    m_ppanel->m_pdclist->SetItem(index, 8,
+                                 toSDMM_PlugIn(1, dc->m_lat_start, 1));
+    m_ppanel->m_pdclist->SetItem(index, 9,
+                                 toSDMM_PlugIn(2, dc->m_lon_start, 1));
+    m_ppanel->m_pdclist->SetItem(index, 10,
+                                 wxString::Format("%03.3f", dc->m_tws));
+    double twd = dc->m_twa + dc->m_course;
+    if (twd < 0.0) twd += 360.0;
+    if (twd > 360.0) twd -= 360.0;
+    m_ppanel->m_pdclist->SetItem(index, 11, wxString::Format("%03.3f", twd));
 
     previous_dc = dc;
   }

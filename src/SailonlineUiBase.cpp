@@ -105,6 +105,9 @@ SailonlinePanel::SailonlinePanel(wxWindow* parent, wxWindowID id,
   m_psplitter = new wxSplitterWindow(this, wxID_ANY, wxDefaultPosition,
                                      wxDefaultSize, wxSP_3D);
   m_psplitter->SetSashGravity(0.2);
+  m_psplitter->Connect(wxEVT_IDLE,
+                       wxIdleEventHandler(SailonlinePanel::m_psplitterOnIdle),
+                       NULL, this);
   m_psplitter->SetMinimumPaneSize(1);
 
   m_panel11 = new wxPanel(m_psplitter, wxID_ANY, wxDefaultPosition,
@@ -211,6 +214,10 @@ SailonlinePanel::SailonlinePanel(wxWindow* parent, wxWindowID id,
       new wxStaticText(m_raceinfo, wxID_ANY, _("not loaded"), wxDefaultPosition,
                        wxDefaultSize, wxALIGN_LEFT);
   m_polarname->Wrap(-1);
+  m_polarname->SetFont(wxFont(wxNORMAL_FONT->GetPointSize(),
+                              wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL,
+                              wxFONTWEIGHT_NORMAL, false, wxEmptyString));
+
   bSizer16->Add(m_polarname, 1, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
   m_pbutton_downloadpolar = new wxButton(m_raceinfo, wxID_ANY, _("Download"),
@@ -251,6 +258,7 @@ SailonlinePanel::SailonlinePanel(wxWindow* parent, wxWindowID id,
   bSizer122->Add(0, 0, 1, wxEXPAND, 5);
 
   bSizer11->Add(bSizer122, 1, wxALL | wxEXPAND, 5);
+
   wxBoxSizer* bSizer121;
   bSizer121 = new wxBoxSizer(wxVERTICAL);
 
@@ -361,7 +369,8 @@ SailonlinePanel::SailonlinePanel(wxWindow* parent, wxWindowID id,
   m_latitude = new wxStaticText(sbSizer6->GetStaticBox(), wxID_ANY, _("0"),
                                 wxDefaultPosition, wxDefaultSize, 0);
   m_latitude->Wrap(-1);
-  fgSizer107->Add(m_latitude, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
+  fgSizer107->Add(m_latitude, 0,
+                  wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT | wxALL, 5);
 
   m_staticText173 =
       new wxStaticText(sbSizer6->GetStaticBox(), wxID_ANY, _("Longitude"),
@@ -372,7 +381,7 @@ SailonlinePanel::SailonlinePanel(wxWindow* parent, wxWindowID id,
   m_longitude = new wxStaticText(sbSizer6->GetStaticBox(), wxID_ANY, _("0"),
                                  wxDefaultPosition, wxDefaultSize, 0);
   m_longitude->Wrap(-1);
-  fgSizer107->Add(m_longitude, 0, wxALL, 5);
+  fgSizer107->Add(m_longitude, 0, wxALIGN_RIGHT | wxALL, 5);
 
   m_staticText175 =
       new wxStaticText(sbSizer6->GetStaticBox(), wxID_ANY, _("Course"),
@@ -383,7 +392,7 @@ SailonlinePanel::SailonlinePanel(wxWindow* parent, wxWindowID id,
   m_course = new wxStaticText(sbSizer6->GetStaticBox(), wxID_ANY, _("0"),
                               wxDefaultPosition, wxDefaultSize, 0);
   m_course->Wrap(-1);
-  fgSizer107->Add(m_course, 0, wxALL, 5);
+  fgSizer107->Add(m_course, 0, wxALIGN_RIGHT | wxALL, 5);
 
   m_staticText22 =
       new wxStaticText(sbSizer6->GetStaticBox(), wxID_ANY, _("Speed"),
@@ -394,9 +403,11 @@ SailonlinePanel::SailonlinePanel(wxWindow* parent, wxWindowID id,
   m_speed = new wxStaticText(sbSizer6->GetStaticBox(), wxID_ANY, _("0"),
                              wxDefaultPosition, wxDefaultSize, 0);
   m_speed->Wrap(-1);
-  fgSizer107->Add(m_speed, 0, wxALL, 5);
+  fgSizer107->Add(m_speed, 0, wxALIGN_RIGHT | wxALL, 5);
 
   sbSizer6->Add(fgSizer107, 1, wxALL | wxEXPAND, 5);
+
+  sbSizer6->Add(0, 0, 1, wxEXPAND, 5);
 
   wxFlexGridSizer* fgSizer19;
   fgSizer19 = new wxFlexGridSizer(0, 4, 0, 0);
@@ -438,25 +449,19 @@ SailonlinePanel::SailonlinePanel(wxWindow* parent, wxWindowID id,
   m_panel12->SetSizer(bSizer5);
   m_panel12->Layout();
   bSizer5->Fit(m_panel12);
-  m_psplitter->SplitVertically(m_panel11, m_panel12, -1);
+  m_psplitter->SplitVertically(m_panel11, m_panel12, 100);
   bSizerMain->Add(m_psplitter, 1, wxEXPAND | wxALL, 5);
 
   this->SetSizer(bSizerMain);
   this->Layout();
 
   // Connect Events
-  m_pracelist->Connect(
-      wxEVT_LEFT_DCLICK,
-      wxMouseEventHandler(SailonlinePanel::OnEditPositionClick), NULL, this);
-  m_pracelist->Connect(wxEVT_LEFT_DOWN,
-                       wxMouseEventHandler(SailonlinePanel::OnLeftUp), NULL,
-                       this);
-  m_pracelist->Connect(wxEVT_LEFT_UP,
-                       wxMouseEventHandler(SailonlinePanel::OnLeftDown), NULL,
-                       this);
   m_pracelist->Connect(wxEVT_COMMAND_LIST_KEY_DOWN,
-                       wxListEventHandler(SailonlinePanel::OnPositionKeyDown),
+                       wxListEventHandler(SailonlinePanel::OnRaceSelected),
                        NULL, this);
+  m_pbutton_downloadpolar->Connect(
+      wxEVT_COMMAND_BUTTON_CLICKED,
+      wxCommandEventHandler(SailonlinePanel::OnPolarDownload), NULL, this);
   m_pbutton_downloadweather->Connect(
       wxEVT_COMMAND_BUTTON_CLICKED,
       wxCommandEventHandler(SailonlinePanel::OnWeatherDownload), NULL, this);
@@ -495,22 +500,20 @@ SailonlinePanel::SailonlinePanel(wxWindow* parent, wxWindowID id,
   m_pbutton_modify->Connect(wxEVT_COMMAND_BUTTON_CLICKED,
                             wxCommandEventHandler(SailonlinePanel::OnDcModify),
                             NULL, this);
+  m_pbutton_tracking->Connect(
+      wxEVT_COMMAND_BUTTON_CLICKED,
+      wxCommandEventHandler(SailonlinePanel::m_pbutton_trackingOnButtonClick),
+      NULL, this);
 }
 
 SailonlinePanel::~SailonlinePanel() {
   // Disconnect Events
-  m_pracelist->Disconnect(
-      wxEVT_LEFT_DCLICK,
-      wxMouseEventHandler(SailonlinePanel::OnEditPositionClick), NULL, this);
-  m_pracelist->Disconnect(wxEVT_LEFT_DOWN,
-                          wxMouseEventHandler(SailonlinePanel::OnLeftUp), NULL,
-                          this);
-  m_pracelist->Disconnect(wxEVT_LEFT_UP,
-                          wxMouseEventHandler(SailonlinePanel::OnLeftDown),
+  m_pracelist->Disconnect(wxEVT_COMMAND_LIST_KEY_DOWN,
+                          wxListEventHandler(SailonlinePanel::OnRaceSelected),
                           NULL, this);
-  m_pracelist->Disconnect(
-      wxEVT_COMMAND_LIST_KEY_DOWN,
-      wxListEventHandler(SailonlinePanel::OnPositionKeyDown), NULL, this);
+  m_pbutton_downloadpolar->Disconnect(
+      wxEVT_COMMAND_BUTTON_CLICKED,
+      wxCommandEventHandler(SailonlinePanel::OnPolarDownload), NULL, this);
   m_pbutton_downloadweather->Disconnect(
       wxEVT_COMMAND_BUTTON_CLICKED,
       wxCommandEventHandler(SailonlinePanel::OnWeatherDownload), NULL, this);
@@ -549,6 +552,10 @@ SailonlinePanel::~SailonlinePanel() {
   m_pbutton_modify->Disconnect(
       wxEVT_COMMAND_BUTTON_CLICKED,
       wxCommandEventHandler(SailonlinePanel::OnDcModify), NULL, this);
+  m_pbutton_tracking->Disconnect(
+      wxEVT_COMMAND_BUTTON_CLICKED,
+      wxCommandEventHandler(SailonlinePanel::m_pbutton_trackingOnButtonClick),
+      NULL, this);
 }
 
 FromTrackDialogBase::FromTrackDialogBase(wxWindow* parent, wxWindowID id,

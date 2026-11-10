@@ -100,15 +100,14 @@ protected:
   wxStaticText* m_staticText25;
 
   // Virtual event handlers, override them in your derived class
-  virtual void OnEditPositionClick(wxMouseEvent& event) { event.Skip(); }
-  virtual void OnLeftUp(wxMouseEvent& event) { event.Skip(); }
-  virtual void OnLeftDown(wxMouseEvent& event) { event.Skip(); }
-  virtual void OnPositionKeyDown(wxListEvent& event) { event.Skip(); }
+  virtual void OnRaceSelected(wxListEvent& event) { event.Skip(); }
+  virtual void OnPolarDownload(wxCommandEvent& event) { event.Skip(); }
   virtual void OnWeatherDownload(wxCommandEvent& event) { event.Skip(); }
   virtual void OnEditConfigurationClick(wxMouseEvent& event) { event.Skip(); }
   virtual void OnWeatherRoutesListLeftDown(wxMouseEvent& event) {
     event.Skip();
   }
+  virtual void OnLeftUp(wxMouseEvent& event) { event.Skip(); }
   virtual void OnWeatherRouteSort(wxListEvent& event) { event.Skip(); }
   virtual void OnWeatherRouteSelected(wxListEvent& event) { event.Skip(); }
   virtual void OnWeatherRouteKeyDown(wxListEvent& event) { event.Skip(); }
@@ -116,6 +115,9 @@ protected:
   virtual void OnDcUpload(wxCommandEvent& event) { event.Skip(); }
   virtual void OnDcFromTrack(wxCommandEvent& event) { event.Skip(); }
   virtual void OnDcModify(wxCommandEvent& event) { event.Skip(); }
+  virtual void m_pbutton_trackingOnButtonClick(wxCommandEvent& event) {
+    event.Skip();
+  }
 
 public:
   wxSplitterWindow* m_psplitter;
@@ -152,6 +154,13 @@ public:
                   const wxString& name = wxEmptyString);
 
   ~SailonlinePanel();
+
+  void m_psplitterOnIdle(wxIdleEvent&) {
+    m_psplitter->SetSashPosition(100);
+    m_psplitter->Disconnect(
+        wxEVT_IDLE, wxIdleEventHandler(SailonlinePanel::m_psplitterOnIdle),
+        NULL, this);
+  }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
