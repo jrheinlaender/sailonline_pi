@@ -1,6 +1,15 @@
 src/sailonline_pi.cpp
 src/Sailonline.cpp
-src/SailonlineUI.cpp
+src/SailonlineUi.cpp
+src/SailonlineUiBase.cpp
+src/FromTrackDialog.cpp
+src/DcModifyDialog.cpp
+src/Race.cpp
 include/sailonline_pi.h
+include/SolApi.h
 include/Sailonline.h
-include/SailonlineUI.h
+include/SailonlineUi.h
+include/SailonlineUiBase.h
+include/FromTrackDialog.h
+include/DcModifyDialog.h
+include/Race.h

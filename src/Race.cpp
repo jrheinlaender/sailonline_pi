@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2026 by Jan Rheinländer                                 *
+ *   Copyright (C) 2026 by Jan Rheinlï¿½nder                                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -79,7 +79,7 @@ double get_recovery_step(const double performance, const double step_seconds,
 
 double get_recovery(const double performance, const double time_seconds,
                     const double theoretical_stw) {
-  if (performance >= 1.0) return 1.0;
+  if (performance >= 1.0 || time_seconds <= 0.0) return 1.0;
 
   std::cout << "Recovery from " << performance << " at " << theoretical_stw
             << " kn in " << time_seconds << " s" << std::endl;
@@ -604,7 +604,7 @@ std::tuple<double, double, double, double> Race::GetBoatData() {
   wxFileName boatdata_fn = m_sailonline_pi.GetDataDir("Race_" + m_id);
   boatdata_fn.SetFullName("boat.xml");
   std::string boatdata =
-      GetUrl(SolApi::kSolBoatDataUrl, boatdata_fn, true, "Finding boat data");
+      GetUrl(SolApi::kSolBoatDataUrl, boatdata_fn, false, "Finding boat data");
   if (boatdata.empty()) return {};
 
   pugi::xml_document boatdata_doc;
@@ -704,6 +704,8 @@ bool Race::GetWeatherData() {
     return false;
   }
 
+  std::string grib_name =
+      m_weatherdata_url.substr(m_weatherdata_url.find_last_of("/") + 1);
 
   wxFileName grib_fn = m_sailonline_pi.GetDataDir("Race_" + m_id + "/Weather");
   grib_fn.SetFullName(grib_name);
@@ -1044,12 +1046,12 @@ void Race::SimplifyDcs(const int max_course_delta, const int max_twa_delta) {
 namespace {
 // Course change required to reach 93% performance is ca. 100.3 degrees
 // Add 6 seconds of performance recovery at 5kn for time between course changes
-// Add 11 seconds (1 server jump) of performance recovery at 5kn for recovery
+// Add 10 seconds (1 server jump) of performance recovery at 5kn for recovery
 // after maneuver
-// TODO Make that precise in calculation below
+// TODO Make that precise in calculation below, depending on actual speed
 // TODO Give safety margin for weather beyond next forecast
 static constexpr double max_recovery =
-    (6.0 + 11.0) * 3.0 / (20.0 * 5.0) / 100.0;
+    (6.0 + 10.0) * 3.0 / (20.0 * 5.0) / 100.0;
 static constexpr double course_change_for_max_loss =
     (0.07 + max_recovery) * 180.0 / M_PI * 25.0;
 }  // namespace
@@ -1146,19 +1148,22 @@ void Race::OptimizeManeuvers() {
               Dc{wxDateTime(p_dc->m_timestamp).Subtract(wxTimeSpan::Seconds(2)),
                  -1.0, -1.0, sign * 180.0, true});
           // ... and the existing dc finalizes the course change to next_twa
+          wxLogMessage("Optimized jibe to %3.3f knots by splitting the jibe",
+                       next_stw);
         }
       }
     } else {
       // Tack
       /* The performance loss for a tack is half the boat speed after the tack,
        * in percent. The performance loss for a course change (without tack) is
-       * ca. 0.07% per degree Strategy: Tack to 0° (zero boat speed) with no
-       * performance loss Change course to next_twa
+       * ca. 0.07% per degree.
+       * Strategy: Tack to 0ï¿½ (zero boat speed) with no performance loss.
+       * Change course to next_twa
        */
       double next_speed = GetSpeedThroughWater(p_dc->m_tws, next_twa);
       // Performance loss for direct tack to next_twa
       double loss1 = get_performance_loss_tack_jibe(next_speed);
-      // Performance loss for course change from 0° to next_twa
+      // Performance loss for course change from 0Â° to next_twa
       double loss2 = get_performance_loss_course_change(0.0, next_twa);
       std::cout << "Optimizing tack, speed after tack=" << next_speed
                 << ", loss1=" << loss1 << ", loss2=" << loss2 << std::endl;
@@ -1258,6 +1263,11 @@ void Race::EnrichDcs() {
   }
 }
 
+// Race starts with perf. loss after course change from TWA 0
+// Set course change sufficiently early before race start
+//
+// Updates happen every 10s (or 30s if last DC is a long time ago)
+// Comment by bonknhoot (Jan) 29.7.2026 in race #1978 chat
 void Race::MakeTrack() const {
   if (m_dcs.empty()) return;
 
