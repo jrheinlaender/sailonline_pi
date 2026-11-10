@@ -65,6 +65,25 @@ Sailonline::Sailonline(sailonline_pi& plugin) : m_sailonline_pi(plugin) {
     return;
   }
 
+  /**
+   * Format of racelist file
+   * <races>
+   *   <race>
+   *     <id>2067</id>
+   *     <name>PIC Coastal Classic Yacht Race 2026</name>
+   *     <description>...</description>
+   *     <message>Practice sailing. Race starts 23/10-22.30UTC. Currently 38
+   * boats registered.</message> <race_type></race_type> <start_time>Oct. 23,
+   * 2026, 10:30 p.m.</start_time> <archived>False</archived>
+   *     <minlon>173.0</minlon>
+   *     <maxlon>178.0</maxlon>
+   *     <minlat>-38.0</minlat>
+   *     <maxlat>-34.0</maxlat>
+   *     <mapurl>http://sailonline.org/site_media/maps/xmlmaps/h.xml</mapurl>
+   *     <url>/webclient/race_2067.xml</url>
+   *   </race>
+   */
+
   // Parse xml and fill list of races
   m_races.clear();
   pugi::xml_node node_races = racelist_doc.child("races");

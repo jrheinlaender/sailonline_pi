@@ -383,11 +383,22 @@ bool Race::DownloadPolar() {
     return false;
   }
 
+  /**
+   * Format of the boat information in raceinfo file
+   * <boat>
+   *   <id>459040</id>
+   *   <syc>True</syc>
+   *   <type>TP-52</type>
+   *   <vpp>
+   *     <name>TP 52</name>
+   *     <tws_splined>0 1 2 ... 39</tws_splined> # knots
+   *     <twa_splined>0 1 2 ... 180</twa_splined> # degrees
+   *     <bs_splined>0 0 ... 0; 0.25 0.27 .. 0.71; ... </bs_splined> # m/s
+   *   </vpp>
+   * </boat>
+   */
+
   // Get boat polar
-  // TWS: Space-separated list of true wind speeds (columns, integer, knots)
-  // TWA: Space-separated list of true wind angles (rows, integer, degrees)
-  // BS: Semicolon-separated list of space-separated lists of wind speeds
-  // (float, m/s)
   pugi::xml_node node_name = race_doc.select_node("/race/boat/vpp/name").node();
   pugi::xml_node node_tws =
       race_doc.select_node("/race/boat/vpp/tws_splined").node();
@@ -458,6 +469,21 @@ bool Race::DownloadWaypoints() {
                           status.description());
     return false;
   }
+
+  /**
+   * Format of the waypoint information in raceinfo file
+   * <course>
+   *   <goal_radius>0.5</goal_radius> # nm
+   *   <waypoint>
+   *     <order>1</order>
+   *     <name>Cowes Offshore</name>
+   *     <lon>-1.2805</lon>
+   *     <lat>50.7714</lat>
+   *     <any_side>False</any_side>
+   *   </waypoint>
+   *   ...
+   * </course>
+   */
 
   // Get waypoints
   m_waypoints.clear();
@@ -566,16 +592,16 @@ std::tuple<double, double, double, double> Race::GetBoatData() {
    *         <name>Boat name</name>
    *         <start_time>2026/02/02 11:00:00 1770030000UTCC</start_time>
    *         <finish_time></finish_time>
-   *         <twa>-1.44488360875</twa> in radians
-   *         <twd>0.662688729491</twd> in radians
-   *         <tws>7.85210627021</tws> in m/s
-   *         <sog>20.4389749219</sog> in kn
+   *         <twa>-1.44488360875</twa> # in radians
+   *         <twd>0.662688729491</twd> # in radians
+   *         <tws>7.85210627021</tws>  # in m/s
+   *         <sog>20.4389749219</sog>  # in kn
    *         <efficiency>1.0</efficiency>
-   *         <dtg>288.38021393</dtg> distance to go in nautical miles
-   *         <dbl>4.81106013291</dbl> distance behind leader
+   *         <dtg>288.38021393</dtg>   # distance to go in nautical miles
+   *         <dbl>4.81106013291</dbl>  # distance behind leader
    *         <lon>-130.832298414</lon>
    *         <lat>44.8420935342</lat>
-   *         <cog>2.10757233825</cog> in radians
+   *         <cog>2.10757233825</cog>  # in radians
    *         <ranking>9</ranking>
    *         <current_leg>0</current_leg>
    *         <last_cmd_type>cc</last_cmd_type>
