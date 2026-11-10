@@ -122,7 +122,7 @@ Dc::Dc(const wxDateTime& timestamp, const double lat_start,
 
 std::vector<std::string> Race::GetErrors() {
   std::vector<std::string> result;
-  std::swap(m_errors, result);
+  m_errors.swap(result);
   return result;
 }
 
@@ -412,7 +412,7 @@ bool Race::DownloadPolar() {
   pugi::xml_document race_doc;
   auto status = race_doc.load_string(GetRaceInfo());
   if (!status) {
-    m_errors.emplace_back("Could not parse race file: %s",
+    m_errors.emplace_back(std::string("Could not parse race file: ") +
                           status.description());
     return false;
   }
@@ -499,7 +499,7 @@ bool Race::DownloadWaypoints() {
   pugi::xml_document race_doc;
   auto status = race_doc.load_string(GetRaceInfo());
   if (!status) {
-    m_errors.emplace_back("Could not parse race file: %s",
+    m_errors.emplace_back(std::string("Could not parse race file: ") +
                           status.description());
     return false;
   }
@@ -561,7 +561,7 @@ bool Race::DownloadBoatUrl() {
   pugi::xml_document race_doc;
   auto status = race_doc.load_string(GetRaceInfo());
   if (!status) {
-    m_errors.emplace_back("Could not parse race file: %s",
+    m_errors.emplace_back(std::string("Could not parse race file: ") +
                           status.description());
     return false;
   }
@@ -610,7 +610,7 @@ std::tuple<double, double, double, double> Race::GetBoatData() {
   pugi::xml_document boatdata_doc;
   auto status = boatdata_doc.load_string(boatdata.c_str());
   if (!status) {
-    m_errors.emplace_back("Could not parse boat data file: %s",
+    m_errors.emplace_back(std::string("Could not parse boat data file: ") +
                           status.description());
     return {};
   }
