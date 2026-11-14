@@ -284,8 +284,10 @@ void SailonlineUi::ShowPage(const int page) {
       break;
     }
     case RaceDcList: {
-      m_prace->DownloadWaypoints();
-      // m_prace->DownloadDcs();
+      if (!m_prace->DownloadWaypoints()) {
+        HandleErrors("Error downloading weather data URL");
+        return;
+      }
       FillDcList();
 
       break;

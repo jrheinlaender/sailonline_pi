@@ -85,7 +85,7 @@ double get_recovery(const double performance, const double time_seconds,
             << " kn in " << time_seconds << " s" << std::endl;
 
   double jump =
-      std::min(time_seconds, 30.0);  // TODO Find correct value for jump
+      std::min(time_seconds, 10.0);  // TODO Find correct value for jump
   double current_stw = theoretical_stw * performance;
   double newperformance = performance;
   double current_time;
@@ -642,7 +642,8 @@ bool Race::UploadDcs() {
 
   if (!m_errors.empty()) return false;
 
-  // TODO optimize this by deleting and uploading alternately, depending on timestamp
+  // TODO optimize this by deleting and uploading alternately, depending on
+  // timestamp
 
   // Delete existing delayed commands
   for (const auto& dc : current_dcs) {
@@ -914,11 +915,11 @@ bool Race::GetWeatherData() {
   double lat_min = weathersystem.attribute("lat_min").as_double(0.0);
   double lat_max = weathersystem.attribute("lat_max").as_double(0.0);
   int lon_num = weathersystem.attribute("lon_n_points").as_int(0);
-  double lon_inc = weathersystem.attribute("lon_increment").as_int(0);
+  double lon_inc = weathersystem.attribute("lon_increment").as_double(0.0);
   int lat_num = weathersystem.attribute("lat_n_points").as_int(0);
-  double lat_inc = weathersystem.attribute("lat_increment").as_int(0);
+  double lat_inc = weathersystem.attribute("lat_increment").as_double(0.0);
   if (lon_min == lon_max || lat_min == lat_max || lon_num == 0 ||
-      lon_inc == 0 || lat_num == 0 || lat_inc == 0) {
+      lon_inc == 0.0 || lat_num == 0 || lat_inc == 0.0) {
     m_errors.push_back(
         "Invalid grib data: Could not read longitude and latitude values");
     return false;
@@ -1227,7 +1228,7 @@ void Race::OptimizeManeuvers() {
   // Note: This assumes a symmetric polar throughout
   // Note: A course change of exactly 180 degrees will be treated as a tack
   // (not sure what SOL does)
-  // TODO Take into account that performance may not be 100% to start with
+  // TODO Take into account that performance may not be 100% to start with!!
   double first_twa = m_dcs.begin()->m_twa;
   auto second_dc = m_dcs.begin();
   ++second_dc;
