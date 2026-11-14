@@ -39,6 +39,7 @@ typedef std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds>
  */
 class Dc {
 public:
+  int id; // Identifies this DC for the SOL server
   wxDateTime m_timestamp;
   double m_lat_start;
   double m_lon_start;
@@ -81,6 +82,12 @@ public:
   /// Extract waypoints from race XML
   bool DownloadWaypoints();
 
+  /// Download list of delayed commands
+  bool DownloadDcs();
+
+  /// Upload list of delayed commands
+  bool UploadDcs();
+
   /// Extract URL of boat data XML from race XML
   bool DownloadBoatUrl();
 
@@ -100,6 +107,9 @@ public:
 
   /// Get weather data and send it to grib_pi
   bool GetWeatherData();
+
+  /// Get list of current DCs stored on SOL server
+  std::list<Dc> GetSolDcs();
 
   /// Enrich the DC list with calculated values for diagnostic purposes
   void EnrichDcs();

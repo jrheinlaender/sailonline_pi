@@ -557,6 +557,145 @@ bool Race::DownloadWaypoints() {
   return true;
 }
 
+std::list<Dc> Race::GetSolDcs() {
+  Login();
+
+  if (m_sol_token.empty()) {
+    m_errors.emplace_back("Not logged into race " + m_id +
+                          ", did you register?");
+    return {};
+  }
+
+  wxFileName dcdata_fn = m_sailonline_pi.GetDataDir("Race_" + m_id);
+  dcdata_fn.SetFullName("dc.xml");
+  std::string dcdata =
+      GetUrl(SolApi::kSolDelayedUrl, dcdata_fn, false, "Finding delayed commands");
+  if (dcdata.empty()) {
+    m_errors.emplace_back("No delayed commands found on " + SolApi::kSolDelayedUrl);
+    return {};
+  }
+
+  pugi::xml_document dcdata_doc;
+  auto status = dcdata_doc.load_string(dcdata.c_str());
+  if (!status) {
+    m_errors.emplace_back(std::string("Could not parse delayed commands data file: ") +
+                          status.description());
+    return {};
+  }
+
+  /**
+   * The downloaded xml file has the following information
+   * <commands>
+   *     <cmd>
+   *         <id>152574788</id>
+	 *         <type>cc</type>
+	 *         <value>2.70550468669</value> # radians
+	 *         <time>2026/11/10 20:48:50 UTC</time>
+	 *     </cmd>
+   *     ...
+   * </commands>
+   */
+
+  std::list<Dc> result;
+  pugi::xml_node node_commands = dcdata_doc.select_node("/commands").node();
+
+  for (pugi::xml_node node_cmd : node_commands.children("cmd")) {
+    if (strcmp(node_cmd.name(), "cmd") == 0) {
+      std::string err_msg{""};
+      int id = pugi_get_int(node_cmd.child("id"), err_msg);
+      std::string type = node_cmd.child("type").first_child().value();
+      double course =
+        pugi_get_double(node_cmd.child("value"), err_msg) / M_PI * 180.0;
+      std::string time = node_cmd.child("time").first_child().value();
+
+      if (!err_msg.empty()) {
+        m_errors.push_back("Invalid delayed command data: " + err_msg);
+        return {};
+      }
+
+      std::istringstream ss(time);
+      timestamp ts;
+      std::chrono::from_stream(ss, "%Y/%m/%d %H:%M:%S UTC", ts);
+
+      result.emplace_back(Dc{ts, -1.0, -1.0, course, (type == "twa")});
+      result.back().id = id;
+    }
+  }
+
+  return result;
+}
+
+bool Race::DownloadDcs() {
+  std::list<Dc> result = GetSolDcs();
+
+  if (!m_errors.empty())
+    return false;
+
+  m_dcs.clear();
+  m_dcs.swap(result);
+  return true;
+}
+
+bool Race::UploadDcs() {
+  std::list<Dc> current_dcs = GetSolDcs();
+
+  if (!m_errors.empty())
+    return false;
+
+  // TODO optimize this by deleting and uploading alternately, depending on timestamp
+
+  // Delete existing delayed commands
+  for (const auto& dc : current_dcs) {
+    wxString result;
+    _OCPN_DLStatus status = OCPN_postDataHttp(
+        SetPlaceholders(SolApi::kSolDelayedDeleteUrl), "id=" + std::to_string(dc.id), result, 60);
+
+    if (status != OCPN_DL_NO_ERROR) {
+      m_errors.emplace_back("Clearing delayed command failed: " + result.ToStdString());
+      return false;
+    }
+  }
+
+  // Upload new delayed commands
+  for (auto dc = m_dcs.begin(); dc != m_dcs.end(); ++dc) {
+    // Skip DCs in the past
+    double delay = std::chrono::duration_cast<std::chrono::seconds>(dc->m_timestamp - std::chrono::system_clock::now()).count() / 3600.0;
+
+    // Skip DCs in the past
+    if (delay < 0.0) {
+      auto next_dc = dc;
+      ++next_dc;
+
+      if (next_dc != m_dcs.end()) {
+        double next_delay = std::chrono::duration_cast<std::chrono::seconds>(next_dc->m_timestamp - std::chrono::system_clock::now()).count() / 3600.0;
+        if (next_delay >= 0.0)
+          delay = 0.0; // Adjust start of DC to now
+      }
+    }
+    if (delay < 0.0)
+      continue;
+
+    double course = (dc->m_is_twa ? dc->m_twa : dc->m_course);
+
+    wxString result;
+    // TODO calculating delay from current time may introduce errors depending
+    // on how long the POST operation takes
+    _OCPN_DLStatus status = OCPN_postDataHttp(
+        SetPlaceholders(SolApi::kSolDelayedCreateUrl),
+        "command=" + std::string(dc->m_is_twa ? "twa" : "cc") +
+        "&value=" + std::to_string(course * M_PI / 180.0) +
+        "&delay=" + std::to_string(delay),
+        result, 60);
+
+    if (status != OCPN_DL_NO_ERROR) {
+      m_errors.emplace_back("Sending delayed command failed: " + result.ToStdString());
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool Race::DownloadBoatUrl() {
   pugi::xml_document race_doc;
   auto status = race_doc.load_string(GetRaceInfo());

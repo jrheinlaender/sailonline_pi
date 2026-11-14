@@ -44,6 +44,12 @@ const static std::string kSolBoatDataUrl =
     "https://www.sailonline.org$$boaturl?token=$$token";
 const static std::string kSolWeatherDataUrl =
     "https://www.sailonline.org$$weatherurl?token=$$token";
+const static std::string kSolDelayedUrl =
+    "https://www.sailonline.org/webclient/command/delayed/?token=$$token";
+const static std::string kSolDelayedDeleteUrl =
+    "https://www.sailonline.org/webclient/command/delete/?token=$$token";
+const static std::string kSolDelayedCreateUrl =
+    "https://www.sailonline.org/webclient/command/post/?token=$$token";
 };  // namespace SolApi
 
 #endif

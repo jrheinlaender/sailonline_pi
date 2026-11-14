@@ -341,8 +341,19 @@ void SailonlineUi::OnWeatherDownload(wxCommandEvent&) {
   if (!m_prace->GetWeatherData()) HandleErrors("Error in weather data");
 }
 
-void SailonlineUi::OnDcDownload(wxCommandEvent&) {}
-void SailonlineUi::OnDcUpload(wxCommandEvent&) {}
+void SailonlineUi::OnDcDownload(wxCommandEvent&) {
+  if (!m_prace->DownloadDcs()) {
+    HandleErrors("Error downloading delayed command list");
+    return;
+  }
+
+  FillDcList();
+}
+
+void SailonlineUi::OnDcUpload(wxCommandEvent&) {
+  if (!m_prace->UploadDcs())
+    HandleErrors("Error downloading delayed command list");
+}
 
 void SailonlineUi::FillDcList() {
   // TODO Error message
