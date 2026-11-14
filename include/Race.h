@@ -32,7 +32,8 @@ typedef void CURL;
 class PlugIn_Waypoint;
 class sailonline_pi;
 
-typedef std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> timestamp;
+typedef std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds>
+    timestamp;
 
 /**
  * Class that handles SOL delayed commands
@@ -40,7 +41,7 @@ typedef std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds>
 class Dc {
 public:
   int id; // Identifies this DC for the SOL server
-  wxDateTime m_timestamp;
+  timestamp m_timestamp;
   double m_lat_start;
   double m_lon_start;
   double m_course;
@@ -53,8 +54,8 @@ public:
   double m_perf_end;      // Performance directly before next course change
   bool m_is_twa;
 
-  Dc(const wxDateTime& m_timestamp, const double m_lat_start,
-     const double m_lon_start, const double m_course, const bool m_is_twa);
+  Dc(const timestamp ts, const double lat_start, const double lon_start,
+     const double course, const bool is_twa);
 };
 
 class Race {
@@ -144,7 +145,7 @@ private:
   // Messaging
   // Request grib values: True wind speed (knots) and true wind direction
   // (degrees)
-  std::pair<double, double> GetWindData(const wxDateTime& t, double lat,
+  std::pair<double, double> GetWindData(const timestamp ts, double lat,
                                         double lon) const;
 
   /**

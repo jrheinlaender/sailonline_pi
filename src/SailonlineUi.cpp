@@ -370,7 +370,7 @@ void SailonlineUi::FillDcList() {
     long index = m_ppanel->m_pdclist->InsertItem(
         m_ppanel->m_pdclist->GetItemCount(), item);
     m_ppanel->m_pdclist->SetItem(
-        index, 0, dc->m_timestamp.Format("%Y/%m/%d %H:%M:%S", wxDateTime::UTC));
+        index, 0, std::format("{:%Y/%m/%d %H:%M:%S}", dc->m_timestamp));
     m_ppanel->m_pdclist->SetItem(index, 1, dc->m_is_twa ? "twa" : "cc");
     m_ppanel->m_pdclist->SetItem(index, 2,
                                  wxString::Format("%03.3f", dc->m_course));
@@ -431,8 +431,9 @@ void SailonlineUi::OnDcFromTrack(wxCommandEvent&) {
       DistanceBearingMercator_Plugin(wp->m_lat, wp->m_lon, first_wp->m_lat,
                                      first_wp->m_lon, &bearing, &distance);
 
-      dcs.emplace_back(Dc{first_wp->m_CreateTime.FromUTC(), first_wp->m_lat,
-                          first_wp->m_lon, bearing, false});
+      dcs.emplace_back(Dc{timestamp(std::chrono::seconds(
+                              first_wp->m_CreateTime.FromUTC().GetTicks())),
+                          first_wp->m_lat, first_wp->m_lon, bearing, false});
 
       first_waypoint = waypoint;
     }
@@ -457,8 +458,7 @@ void SailonlineUi::OnCopyDcs(wxCommandEvent&) {
   const auto& dcs = m_prace->GetDcs();
 
   for (const auto& dc : dcs) {
-    wxString timestamp =
-        dc.m_timestamp.Format("%Y/%m/%d %H:%M:%S", wxDateTime::UTC);
+    wxString timestamp = std::format("{:%Y/%m/%d %H:%M:%S}", dc.m_timestamp);
     wxString coursetype = (dc.m_is_twa ? "twa" : "cc");
     wxString course =
         wxString::Format("%03.3f", dc.m_is_twa ? dc.m_twa : dc.m_course);

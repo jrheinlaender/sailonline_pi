@@ -108,9 +108,9 @@ double get_recovery(const double performance, const double time_seconds,
 }
 }  // namespace
 
-Dc::Dc(const wxDateTime& timestamp, const double lat_start,
-       const double lon_start, const double course, const bool is_twa)
-    : m_timestamp(timestamp),
+Dc::Dc(const timestamp ts, const double lat_start, const double lon_start,
+       const double course, const bool is_twa)
+    : m_timestamp(ts),
       m_lat_start(lat_start),
       m_lon_start(lon_start),
       m_is_twa(is_twa) {
@@ -1219,10 +1219,8 @@ void Race::OptimizeManeuvers() {
         // Note: Two seconds difference is required to preserve the order of the
         // DCs
         m_dcs.emplace(
-            p_dc,
-            Dc{wxDateTime(p_dc->m_timestamp).Subtract(wxTimeSpan::Seconds(2)),
-               -1.0, -1.0, first_twa + sign * course_change_for_max_loss,
-               true});
+            p_dc, Dc{p_dc->m_timestamp - std::chrono::seconds(2), -1.0, -1.0,
+                     first_twa + sign * course_change_for_max_loss, true});
         // ... and the existing dc finalizes the course change to next_twa
         wxLogMessage(
             "Splitting course change of %3.3f degrees to limit loss at 93%",
@@ -1257,14 +1255,10 @@ void Race::OptimizeManeuvers() {
         // TODO Take into account loss in VMG due to the course changes and
         // their duration Insert two course changes, filling only required
         // fields
-        m_dcs.emplace(
-            p_dc,
-            Dc{wxDateTime(p_dc->m_timestamp).Subtract(wxTimeSpan::Seconds(4)),
-               -1.0, -1.0, first_twa - sign * delta1, true});
-        m_dcs.emplace(
-            p_dc,
-            Dc{wxDateTime(p_dc->m_timestamp).Subtract(wxTimeSpan::Seconds(2)),
-               -1.0, -1.0, sign * 180.0, true});
+        m_dcs.emplace(p_dc, Dc{p_dc->m_timestamp - std::chrono::seconds(4),
+                               -1.0, -1.0, first_twa - sign * delta1, true});
+        m_dcs.emplace(p_dc, Dc{p_dc->m_timestamp - std::chrono::seconds(2),
+                               -1.0, -1.0, sign * 180.0, true});
         // ... and the existing dc finalizes the course change to next_twa
         wxLogMessage("Optimized jibe to %3.3f knots to limit loss at 93%",
                      next_stw);
@@ -1282,10 +1276,8 @@ void Race::OptimizeManeuvers() {
           // next_twa
           // TODO Take into account loss in VMG due to the course changes and
           // their duration
-          m_dcs.emplace(
-              p_dc,
-              Dc{wxDateTime(p_dc->m_timestamp).Subtract(wxTimeSpan::Seconds(2)),
-                 -1.0, -1.0, sign * 180.0, true});
+          m_dcs.emplace(p_dc, Dc{p_dc->m_timestamp - std::chrono::seconds(2),
+                                 -1.0, -1.0, sign * 180.0, true});
           // ... and the existing dc finalizes the course change to next_twa
           wxLogMessage("Optimized jibe to %3.3f knots by splitting the jibe",
                        next_stw);
@@ -1307,10 +1299,8 @@ void Race::OptimizeManeuvers() {
       std::cout << "Optimizing tack, speed after tack=" << next_speed
                 << ", loss1=" << loss1 << ", loss2=" << loss2 << std::endl;
       if (loss1 > loss2) {
-        m_dcs.emplace(
-            p_dc,
-            Dc{wxDateTime(p_dc->m_timestamp).Subtract(wxTimeSpan::Seconds(2)),
-               -1.0, -1.0, -sign * kTwaZero, true});
+        m_dcs.emplace(p_dc, Dc{p_dc->m_timestamp - std::chrono::seconds(2),
+                               -1.0, -1.0, -sign * kTwaZero, true});
         // ... and the existing dc finalizes the course change to next_twa
         wxLogMessage("Optimized tack to %3.3f by splitting the tack",
                      next_speed);
@@ -1345,10 +1335,9 @@ void Race::EnrichDcs() {
     // Calculate extra values
     if (dc->m_lat_start == -1.0 && dc != m_dcs.begin()) {
       // DC course change optimization doesn't fill these fields
-      double dist =
-          previous_dc->m_stw *
-          (dc->m_timestamp - previous_dc->m_timestamp).GetSeconds().ToDouble() /
-          3600.0;
+      double dist = previous_dc->m_stw *
+                    (dc->m_timestamp - previous_dc->m_timestamp).count() /
+                    3600.0;
       PositionBearingDistanceMercator_Plugin(
           previous_dc->m_lat_start, previous_dc->m_lon_start,
           previous_dc->m_course, dist, &dc->m_lat_start, &dc->m_lon_start);
@@ -1390,13 +1379,12 @@ void Race::EnrichDcs() {
                                              previous_dc->m_twa, dc->m_twa);
     auto next_dc = dc;
     ++next_dc;
-    dc->m_perf_end = (next_dc == m_dcs.end())
-                         ? 1.0
-                         : get_recovery(dc->m_perf_begin,
-                                        (next_dc->m_timestamp - dc->m_timestamp)
-                                            .GetSeconds()
-                                            .ToDouble(),
-                                        dc->m_stw);
+    dc->m_perf_end =
+        (next_dc == m_dcs.end())
+            ? 1.0
+            : get_recovery(dc->m_perf_begin,
+                           (next_dc->m_timestamp - dc->m_timestamp).count(),
+                           dc->m_stw);
 
     previous_dc = dc;
   }
@@ -1412,8 +1400,7 @@ void Race::MakeTrack() const {
 
   PlugIn_Track track;
   track.m_NameString =
-      "SOL " + m_id + " " +
-      m_dcs.front().m_timestamp.Format("%x %H:%M", wxDateTime::UTC);
+      "SOL " + m_id + " " + std::format("%x %H:%M", m_dcs.front().m_timestamp);
   track.m_StartString = "Start";
   track.m_EndString = "End";
   track.m_GUID = GetNewGUID();
@@ -1430,27 +1417,28 @@ void Race::MakeTrack() const {
     // memory
     PlugIn_Waypoint* pwaypoint = new PlugIn_Waypoint(
         current_lat, current_lon, "dot", _("SOL route point"), wxEmptyString);
+    pwaypoint->m_CreateTime = dc->m_timestamp.time_since_epoch().count();
     // TODO Remove the ToUTC() as soon as bug #621 is fixed in main program
-    pwaypoint->m_CreateTime = dc->m_timestamp.ToUTC();
+    pwaypoint->m_CreateTime = pwaypoint->m_CreateTime.ToUTC();
     track.pWaypointList->Append(pwaypoint);
 
     auto next_dc = dc;
     ++next_dc;
-    double time_seconds =
-        (next_dc != m_dcs.end())
-            ? (next_dc->m_timestamp - dc->m_timestamp).GetSeconds().ToDouble()
-            : 30.0; // TODO use jump length
+    double time_seconds = (next_dc != m_dcs.end())
+                              ? (next_dc->m_timestamp - dc->m_timestamp).count()
+                              : 11.0;  // TODO use jump length
 
     // Note: Waypoints are only created at DC timestamps, not at every jump
-    wxDateTime current_time = dc->m_timestamp;
-    double jump = std::min(time_seconds, 30.0);
-    wxTimeSpan jump_span(0, 0, jump);
+    timestamp current_time = dc->m_timestamp;
+    double jump =
+        std::min(time_seconds, 10.0);  // TODO sometimes this can be 30s
+    std::chrono::seconds jump_span(long(std::round(jump)));
 
-    for (; current_time < next_dc->m_timestamp.Add(jump_span);
-         current_time.Add(jump_span)) {
+    for (; current_time < next_dc->m_timestamp + jump_span;
+         current_time + jump_span) {
       // Handle last, fractional jump
       if (current_time > next_dc->m_timestamp) {
-        jump = (current_time - next_dc->m_timestamp).GetSeconds().ToDouble();
+        jump = (current_time - next_dc->m_timestamp).count();
         current_time = next_dc->m_timestamp;
       }
 
