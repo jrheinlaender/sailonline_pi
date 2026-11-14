@@ -382,13 +382,28 @@ std::string pugi_get_string(const pugi::xml_document& doc,
   return node.first_child().value();
 }
 
-double pugi_get_double(const pugi::xml_document& doc, const std::string& path,
-                       std::string& err_msg) {
-  pugi::xml_node node = doc.select_node(path.c_str()).node();
+double pugi_get_double(const pugi::xml_node& node, std::string& err_msg) {
   try {
     return std::stod(node.first_child().value());
   } catch (const std::invalid_argument& err) {
-    err_msg = "Could not convert '" + path + "' to double";
+    err_msg = "Could not convert to double: ";
+    return {};
+  }
+}
+
+double pugi_get_double(const pugi::xml_document& doc, const std::string& path,
+                       std::string& err_msg) {
+  double result =
+      pugi_get_double(doc.select_node(path.c_str()).node(), err_msg);
+  if (!err_msg.empty()) err_msg.append("'" + path + "'");
+  return result;
+}
+
+int pugi_get_int(const pugi::xml_node& node, std::string& err_msg) {
+  try {
+    return std::stoi(node.first_child().value());
+  } catch (const std::invalid_argument& err) {
+    err_msg = "Could not convert to integer: ";
     return {};
   }
 }
@@ -408,6 +423,8 @@ timestamp pugi_get_time(const pugi::xml_node& node, const std::string& attr) {
   std::chrono::from_stream(ss, "%Y/%m/%d %H:%M:%S", result);
   return result;
 }
+}  // namespace
+
 bool Race::DownloadPolar() {
   pugi::xml_document race_doc;
   auto status = race_doc.load_string(GetRaceInfo());
