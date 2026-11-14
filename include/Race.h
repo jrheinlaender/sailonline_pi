@@ -40,7 +40,7 @@ typedef std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds>
  */
 class Dc {
 public:
-  int id; // Identifies this DC for the SOL server
+  int id;  // Identifies this DC for the SOL server
   timestamp m_timestamp;
   double m_lat_start;
   double m_lon_start;

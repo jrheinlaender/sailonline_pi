@@ -568,18 +568,20 @@ std::list<Dc> Race::GetSolDcs() {
 
   wxFileName dcdata_fn = m_sailonline_pi.GetDataDir("Race_" + m_id);
   dcdata_fn.SetFullName("dc.xml");
-  std::string dcdata =
-      GetUrl(SolApi::kSolDelayedUrl, dcdata_fn, false, "Finding delayed commands");
+  std::string dcdata = GetUrl(SolApi::kSolDelayedUrl, dcdata_fn, false,
+                              "Finding delayed commands");
   if (dcdata.empty()) {
-    m_errors.emplace_back("No delayed commands found on " + SolApi::kSolDelayedUrl);
+    m_errors.emplace_back("No delayed commands found on " +
+                          SolApi::kSolDelayedUrl);
     return {};
   }
 
   pugi::xml_document dcdata_doc;
   auto status = dcdata_doc.load_string(dcdata.c_str());
   if (!status) {
-    m_errors.emplace_back(std::string("Could not parse delayed commands data file: ") +
-                          status.description());
+    m_errors.emplace_back(
+        std::string("Could not parse delayed commands data file: ") +
+        status.description());
     return {};
   }
 
@@ -588,10 +590,10 @@ std::list<Dc> Race::GetSolDcs() {
    * <commands>
    *     <cmd>
    *         <id>152574788</id>
-	 *         <type>cc</type>
-	 *         <value>2.70550468669</value> # radians
-	 *         <time>2026/11/10 20:48:50 UTC</time>
-	 *     </cmd>
+   *         <type>cc</type>
+   *         <value>2.70550468669</value> # radians
+   *         <time>2026/11/10 20:48:50 UTC</time>
+   *     </cmd>
    *     ...
    * </commands>
    */
@@ -605,7 +607,7 @@ std::list<Dc> Race::GetSolDcs() {
       int id = pugi_get_int(node_cmd.child("id"), err_msg);
       std::string type = node_cmd.child("type").first_child().value();
       double course =
-        pugi_get_double(node_cmd.child("value"), err_msg) / M_PI * 180.0;
+          pugi_get_double(node_cmd.child("value"), err_msg) / M_PI * 180.0;
       std::string time = node_cmd.child("time").first_child().value();
 
       if (!err_msg.empty()) {
@@ -628,8 +630,7 @@ std::list<Dc> Race::GetSolDcs() {
 bool Race::DownloadDcs() {
   std::list<Dc> result = GetSolDcs();
 
-  if (!m_errors.empty())
-    return false;
+  if (!m_errors.empty()) return false;
 
   m_dcs.clear();
   m_dcs.swap(result);
@@ -639,19 +640,20 @@ bool Race::DownloadDcs() {
 bool Race::UploadDcs() {
   std::list<Dc> current_dcs = GetSolDcs();
 
-  if (!m_errors.empty())
-    return false;
+  if (!m_errors.empty()) return false;
 
   // TODO optimize this by deleting and uploading alternately, depending on timestamp
 
   // Delete existing delayed commands
   for (const auto& dc : current_dcs) {
     wxString result;
-    _OCPN_DLStatus status = OCPN_postDataHttp(
-        SetPlaceholders(SolApi::kSolDelayedDeleteUrl), "id=" + std::to_string(dc.id), result, 60);
+    _OCPN_DLStatus status =
+        OCPN_postDataHttp(SetPlaceholders(SolApi::kSolDelayedDeleteUrl),
+                          "id=" + std::to_string(dc.id), result, 60);
 
     if (status != OCPN_DL_NO_ERROR) {
-      m_errors.emplace_back("Clearing delayed command failed: " + result.ToStdString());
+      m_errors.emplace_back("Clearing delayed command failed: " +
+                            result.ToStdString());
       return false;
     }
   }
@@ -659,7 +661,10 @@ bool Race::UploadDcs() {
   // Upload new delayed commands
   for (auto dc = m_dcs.begin(); dc != m_dcs.end(); ++dc) {
     // Skip DCs in the past
-    double delay = std::chrono::duration_cast<std::chrono::seconds>(dc->m_timestamp - std::chrono::system_clock::now()).count() / 3600.0;
+    double delay = std::chrono::duration_cast<std::chrono::seconds>(
+                       dc->m_timestamp - std::chrono::system_clock::now())
+                       .count() /
+                   3600.0;
 
     // Skip DCs in the past
     if (delay < 0.0) {
@@ -667,13 +672,15 @@ bool Race::UploadDcs() {
       ++next_dc;
 
       if (next_dc != m_dcs.end()) {
-        double next_delay = std::chrono::duration_cast<std::chrono::seconds>(next_dc->m_timestamp - std::chrono::system_clock::now()).count() / 3600.0;
-        if (next_delay >= 0.0)
-          delay = 0.0; // Adjust start of DC to now
+        double next_delay =
+            std::chrono::duration_cast<std::chrono::seconds>(
+                next_dc->m_timestamp - std::chrono::system_clock::now())
+                .count() /
+            3600.0;
+        if (next_delay >= 0.0) delay = 0.0;  // Adjust start of DC to now
       }
     }
-    if (delay < 0.0)
-      continue;
+    if (delay < 0.0) continue;
 
     double course = (dc->m_is_twa ? dc->m_twa : dc->m_course);
 
@@ -683,12 +690,13 @@ bool Race::UploadDcs() {
     _OCPN_DLStatus status = OCPN_postDataHttp(
         SetPlaceholders(SolApi::kSolDelayedCreateUrl),
         "command=" + std::string(dc->m_is_twa ? "twa" : "cc") +
-        "&value=" + std::to_string(course * M_PI / 180.0) +
-        "&delay=" + std::to_string(delay),
+            "&value=" + std::to_string(course * M_PI / 180.0) +
+            "&delay=" + std::to_string(delay),
         result, 60);
 
     if (status != OCPN_DL_NO_ERROR) {
-      m_errors.emplace_back("Sending delayed command failed: " + result.ToStdString());
+      m_errors.emplace_back("Sending delayed command failed: " +
+                            result.ToStdString());
       return false;
     }
   }
@@ -922,9 +930,8 @@ bool Race::GetWeatherData() {
   std::vector<HostApi123::MeteoRecordSet> v_record_set;
 
   for (pugi::xml_node node_frame = node_frames.first_child();
-       node_frame != nullptr; ) {
-    if (strcmp(node_frame.name(), "frame") != 0)
-      continue;
+       node_frame != nullptr;) {
+    if (strcmp(node_frame.name(), "frame") != 0) continue;
 
     timestamp frame_time = pugi_get_time(node_frame, "target_time");
     pugi::xml_node node_u = node_frame.first_child();
@@ -949,7 +956,7 @@ bool Race::GetWeatherData() {
         double u = std::stod(u_str);
         double v = std::stod(v_str);
         u_raw[j * lon_num + i] = u;
-        v_raw[j * lon_num + i] = v; // data[j * Ni + i]
+        v_raw[j * lon_num + i] = v;  // data[j * Ni + i]
       } catch (const std::exception& e) {
         m_errors.emplace_back(
             "Format error in U-V wind data at i=" + std::to_string(i) +
@@ -984,17 +991,32 @@ bool Race::GetWeatherData() {
     }
 
     // Note: Ownership of raw data is transferred here
-    HostApi123::MeteoRecord u_record{
-      issue_time, frame_time,
-      lat_min, lon_min, lat_max, lon_max, lat_num, lon_num, lat_inc, lon_inc,
-      HostApi123::MeteoRecord::WIND_VX, u_raw
-    };
-    HostApi123::MeteoRecord v_record{
-      issue_time, frame_time,
-      lat_min, lon_min, lat_max, lon_max, lat_num, lon_num, lat_inc, lon_inc,
-      HostApi123::MeteoRecord::WIND_VY, v_raw
-    };
-    HostApi123::MeteoRecordSet* p_record_set = new HostApi123::MeteoRecordSet{frame_time};
+    HostApi123::MeteoRecord u_record{issue_time,
+                                     frame_time,
+                                     lat_min,
+                                     lon_min,
+                                     lat_max,
+                                     lon_max,
+                                     lat_num,
+                                     lon_num,
+                                     lat_inc,
+                                     lon_inc,
+                                     HostApi123::MeteoRecord::WIND_VX,
+                                     u_raw};
+    HostApi123::MeteoRecord v_record{issue_time,
+                                     frame_time,
+                                     lat_min,
+                                     lon_min,
+                                     lat_max,
+                                     lon_max,
+                                     lat_num,
+                                     lon_num,
+                                     lat_inc,
+                                     lon_inc,
+                                     HostApi123::MeteoRecord::WIND_VY,
+                                     v_raw};
+    HostApi123::MeteoRecordSet* p_record_set =
+        new HostApi123::MeteoRecordSet{frame_time};
     p_record_set->Add(HostApi123::MeteoRecord::WIND_VX, std::move(u_record));
     p_record_set->Add(HostApi123::MeteoRecord::WIND_VY, std::move(v_record));
 
@@ -1008,9 +1030,8 @@ bool Race::GetWeatherData() {
     v["Source"] = "SAILONLINE_PI";
     v["Type"] = "Request";
     v["Msg"] = "APPLY_METEO_TIMELINE_RECORD";
-    v["Action"] = (frame == 0 ? "Clear" :
-                    (node_frame == nullptr ? "Finish" : "Append")
-                  );
+    v["Action"] =
+        (frame == 0 ? "Clear" : (node_frame == nullptr ? "Finish" : "Append"));
     char ptr[64];
     snprintf(ptr, sizeof ptr, "%p", (void*)p_record_set);
     v["MeteoRecordSetPtr"] = ptr;
@@ -1023,18 +1044,22 @@ bool Race::GetWeatherData() {
   return true;
 }
 
-std::pair<double, double> Race::GetWindData(const wxDateTime& time, double lat,
+std::pair<double, double> Race::GetWindData(const timestamp ts, double lat,
                                             double lon) const {
   Json::Value v;
   Json::FastWriter writer;
-  if (!time.IsValid()) return {-1.0, -1.0};
+  if (ts.time_since_epoch().count() <= 0) return {-1.0, -1.0};
 
-  v["Day"] = time.GetDay();  // Converts to local time
-  v["Month"] = time.GetMonth();
-  v["Year"] = time.GetYear();
-  v["Hour"] = time.GetHour();
-  v["Minute"] = time.GetMinute();
-  v["Second"] = time.GetSecond();
+  std::time_t t(ts.time_since_epoch().count());
+  std::tm local_tm = *std::localtime(&t);
+
+  v["EpochSeconds"] = std::to_string(ts.time_since_epoch().count());
+  v["Day"] = local_tm.tm_mday;
+  v["Month"] = local_tm.tm_mon;
+  v["Year"] = local_tm.tm_year;
+  v["Hour"] = local_tm.tm_hour;
+  v["Minute"] = local_tm.tm_min;
+  v["Second"] = local_tm.tm_sec;
 
   v["Source"] = "SAILONLINE_PI";
   v["Type"] = "Request";
