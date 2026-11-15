@@ -1074,7 +1074,7 @@ std::pair<double, double> Race::GetWindData(const timestamp ts, double lat,
   v["EpochSeconds"] = std::to_string(ts.time_since_epoch().count());
   v["Day"] = local_tm.tm_mday;
   v["Month"] = local_tm.tm_mon;
-  v["Year"] = local_tm.tm_year;
+  v["Year"] = local_tm.tm_year + 1900;
   v["Hour"] = local_tm.tm_hour;
   v["Minute"] = local_tm.tm_min;
   v["Second"] = local_tm.tm_sec;
@@ -1093,7 +1093,8 @@ std::pair<double, double> Race::GetWindData(const timestamp ts, double lat,
     return {reply["WIND SPEED"].asDouble() * 3600 / 1852,
             reply["WIND DIR"].asDouble()};
 
-  wxLogMessage("Invalid wind data: %s", reply["Error"].asString().c_str());
+  std::string errmsg = (reply != Json::nullValue ? reply["Error"].asString() : "No data returned");
+  wxLogMessage("Invalid wind data: %s", errmsg.c_str());
   return {-1.0, -1.0};
 }
 
@@ -1120,8 +1121,8 @@ double Race::GetSpeedThroughWater(double tws, double twa) const {
   if (reply != Json::nullValue && reply.isMember("BOAT SPEED"))
     return reply["BOAT SPEED"].asDouble();
 
-  wxLogMessage("Invalid speed through water: %s",
-               reply["Error"].asString().c_str());
+  std::string errmsg = (reply != Json::nullValue ? reply["Error"].asString() : "No data returned");
+  wxLogMessage("Invalid speed through water: %s", errmsg.c_str());
   return -1.0;
 }
 
@@ -1146,7 +1147,8 @@ std::pair<double, double> Race::GetBoatOptimalAngles(double tws) const {
       reply.isMember("OPT DOWN"))
     return {reply["OPT UP"].asDouble(), reply["OPT DOWN"].asDouble()};
 
-  wxLogMessage("Invalid optimal angles: %s", reply["Error"].asString().c_str());
+  std::string errmsg = (reply != Json::nullValue ? reply["Error"].asString() : "No data returned");
+  wxLogMessage("Invalid optimal angles: %s", errmsg.c_str());
   return {-1.0, -1.0};
 }
 
