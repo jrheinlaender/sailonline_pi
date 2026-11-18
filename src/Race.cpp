@@ -79,7 +79,8 @@ double get_recovery_step(const double performance, const double step_seconds,
 
 double get_recovery(const double performance, const double time_seconds,
                     const double theoretical_stw) {
-  if (performance >= 1.0 || time_seconds <= 0.0) return 1.0;
+  if (performance >= 1.0) return 1.0;
+  if (time_seconds <= 0.0) return performance;
 
   std::cout << "Recovery from " << performance << " at " << theoretical_stw
             << " kn in " << time_seconds << " s" << std::endl;
@@ -645,11 +646,10 @@ std::list<Dc> Race::GetSolDcs() {
 }
 
 bool Race::DownloadDcs() {
-  std::list<Dc> result = GetSolDcs();
+  std::list<Dc> result{GetSolDcs()};
 
   if (!m_errors.empty()) return false;
 
-  m_dcs.clear();
   m_dcs.swap(result);
   return true;
 }
@@ -677,6 +677,8 @@ bool Race::UploadDcs() {
   }
 
   // Upload new delayed commands
+  std::size_t num = 0;
+
   for (auto dc = m_dcs.begin(); dc != m_dcs.end(); ++dc) {
     // Skip DCs in the past
     double delay = std::chrono::duration_cast<std::chrono::seconds>(
@@ -717,6 +719,10 @@ bool Race::UploadDcs() {
                             result.ToStdString());
       return false;
     }
+
+    // Limit number of uploaded DCs, to avoid flooding the SOL server
+    if (++num > 30)
+      break;
   }
 
   return true;
